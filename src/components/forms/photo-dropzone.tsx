@@ -8,6 +8,7 @@ import {
   FileImage,
   ImagePlus,
   LoaderCircle,
+  ShieldCheck,
   Trash2,
   UploadCloud,
 } from 'lucide-react'
@@ -68,6 +69,10 @@ export function PhotoDropzone({
             {MIN_PHOTO_COUNT}–{MAX_PHOTO_COUNT} ფოტო · თითოეული მაქს.{' '}
             {formatBytes(MAX_FILE_SIZE_BYTES)} · ჯამში{' '}
             {formatBytes(MAX_TOTAL_UPLOAD_SIZE_BYTES)}
+            <span className="mt-1 block">
+              ატვირთვამდე ბრაუზერი ხელახლა ქმნის ფოტოს და შლის EXIF/GPS
+              მონაცემებს. HEIC/HEIF მიიღება მხოლოდ უსაფრთხო გარდაქმნისას.
+            </span>
           </p>
         </div>
         <span className="text-graphite/65 shrink-0 font-mono text-xs font-bold">
@@ -222,6 +227,12 @@ export function PhotoDropzone({
                   {formatBytes(photo.file.size)}
                 </span>
               </div>
+              {photo.metadataSanitized ? (
+                <p className="text-graphite/60 flex items-center gap-1.5 px-2.5 pb-2 text-[9px] font-bold tracking-[0.06em] uppercase">
+                  <ShieldCheck aria-hidden="true" className="size-3" />
+                  EXIF/GPS წაშლილია
+                </p>
+              ) : null}
             </li>
           ))}
         </ul>

@@ -34,6 +34,7 @@ const NO_STORE_HEADERS = {
   'Cache-Control': 'private, no-store',
   'X-Content-Type-Options': 'nosniff',
 }
+const CAPACITY_RETRY_AFTER_SECONDS = 24 * 60 * 60
 
 function errorResponse(
   code: ApiErrorCode,
@@ -102,6 +103,7 @@ export async function POST(request: Request) {
       mileage: input.mileage ?? null,
       phone: input.phone,
       price: input.price,
+      priceCurrency: input.priceCurrency,
       transmission: input.transmission ?? null,
       vehicleModel: input.vehicleModel,
       vehicleYear: input.vehicleYear,
@@ -121,6 +123,7 @@ export async function POST(request: Request) {
         p_mileage: input.mileage ?? null,
         p_phone: input.phone,
         p_price: input.price,
+        p_price_currency: input.priceCurrency,
         p_rate_limit: rateLimit.limit,
         p_request_rate_limit: rateLimit.requestLimit,
         p_request_fingerprint: requestFingerprint,
@@ -133,6 +136,12 @@ export async function POST(request: Request) {
     )
 
     if (beginError) {
+      if (beginError.message.includes('intake_capacity_exceeded')) {
+        return errorResponse('RATE_LIMITED', 429, undefined, {
+          'Retry-After': String(CAPACITY_RETRY_AFTER_SECONDS),
+        })
+      }
+
       if (beginError.message.includes('idempotency_conflict')) {
         return errorResponse('IDEMPOTENCY_CONFLICT', 409)
       }

@@ -49,7 +49,7 @@ function sanitizePostgrestSearch(value: string) {
 
 async function loadRecordedRevenue() {
   const supabase = getServiceSupabaseClient()
-  let revenue = 0
+  let revenueInTetri = 0
   let offset = 0
 
   while (true) {
@@ -57,6 +57,7 @@ async function loadRecordedRevenue() {
       .from('submissions')
       .select('id, amount_paid')
       .eq('upload_state', 'complete')
+      .eq('status', 'converted')
       .gt('amount_paid', 0)
       .order('id', { ascending: true })
       .range(offset, offset + REVENUE_PAGE_SIZE - 1)
@@ -69,14 +70,16 @@ async function loadRecordedRevenue() {
     const rows = data ?? []
     for (const row of rows) {
       const amount = Number(row.amount_paid ?? 0)
-      if (Number.isFinite(amount)) revenue += amount
+      if (Number.isFinite(amount) && amount > 0) {
+        revenueInTetri += Math.round(amount * 100)
+      }
     }
 
     if (rows.length < REVENUE_PAGE_SIZE) break
     offset += REVENUE_PAGE_SIZE
   }
 
-  return revenue
+  return revenueInTetri / 100
 }
 
 async function loadStats(): Promise<AdminDashboardStats> {
@@ -114,7 +117,7 @@ async function loadSubmissionList(filters: AdminDashboardFilters) {
   let query = supabase
     .from('submissions')
     .select(
-      'id, public_reference, phone, customer_name, vehicle_model, vehicle_year, price, status, amount_paid, created_at',
+      'id, public_reference, phone, customer_name, vehicle_model, vehicle_year, price, price_currency, status, amount_paid, created_at',
     )
     .eq('upload_state', 'complete')
     .order('created_at', { ascending: false })

@@ -105,7 +105,7 @@ function boundedInteger(
 }
 
 export function getSubmissionRateLimitConfig() {
-  const limit = boundedInteger(process.env.SUBMISSION_RATE_LIMIT_MAX, 5, 1, 100)
+  const limit = boundedInteger(process.env.SUBMISSION_RATE_LIMIT_MAX, 3, 1, 100)
   const configuredRequestLimit = boundedInteger(
     process.env.SUBMISSION_INIT_REQUEST_RATE_LIMIT_MAX,
     30,

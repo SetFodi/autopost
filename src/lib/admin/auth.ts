@@ -2,6 +2,7 @@ import { cache } from 'react'
 import { redirect } from 'next/navigation'
 
 import { createServerSupabaseClient } from '@/lib/supabase/server'
+import { getPublicSupabaseKey } from '@/lib/supabase/config'
 
 export type AdminIdentity = {
   id: string
@@ -13,12 +14,12 @@ export function getAdminConfigurationIssue() {
     return 'ADMIN_EMAIL არ არის მითითებული.'
   }
 
-  if (!process.env.NEXT_PUBLIC_SUPABASE_URL) {
+  if (!process.env.NEXT_PUBLIC_SUPABASE_URL?.trim()) {
     return 'NEXT_PUBLIC_SUPABASE_URL არ არის მითითებული.'
   }
 
-  if (!process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY) {
-    return 'NEXT_PUBLIC_SUPABASE_ANON_KEY არ არის მითითებული.'
+  if (!getPublicSupabaseKey()) {
+    return 'NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY არ არის მითითებული.'
   }
 
   return null

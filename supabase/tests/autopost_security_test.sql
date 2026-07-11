@@ -2,12 +2,19 @@ begin;
 
 create extension if not exists pgtap with schema extensions;
 
-select plan(22);
+select plan(27);
 
 select has_table(
   'public',
   'submissions',
   'the private submission ledger exists'
+);
+
+select has_column(
+  'public',
+  'submissions',
+  'price_currency',
+  'submissions record the explicit vehicle price currency'
 );
 
 select has_table(
@@ -21,6 +28,17 @@ select has_function(
   'consume_rate_limit',
   array['text', 'text', 'integer', 'integer'],
   'the atomic rate-limit function exists'
+);
+
+select has_function(
+  'public',
+  'begin_submission',
+  array[
+    'uuid', 'text', 'text', 'text', 'integer', 'integer', 'integer', 'text',
+    'text', 'text', 'smallint', 'numeric', 'text', 'integer', 'text', 'text',
+    'text', 'text', 'boolean', 'jsonb'
+  ],
+  'the canonical intake function requires an explicit currency'
 );
 
 select is(
@@ -104,7 +122,7 @@ select ok(
   not exists (
     select 1
     from unnest(array[
-      'public.begin_submission(uuid,text,text,text,integer,integer,integer,text,text,text,smallint,numeric,integer,text,text,text,text,boolean,jsonb)',
+      'public.begin_submission(uuid,text,text,text,integer,integer,integer,text,text,text,smallint,numeric,text,integer,text,text,text,text,boolean,jsonb)',
       'public.complete_submission(uuid,jsonb)',
       'public.claim_stale_submissions(timestamptz,integer)',
       'public.delete_claimed_submission(uuid,uuid)',
@@ -119,7 +137,7 @@ select ok(
   not exists (
     select 1
     from unnest(array[
-      'public.begin_submission(uuid,text,text,text,integer,integer,integer,text,text,text,smallint,numeric,integer,text,text,text,text,boolean,jsonb)',
+      'public.begin_submission(uuid,text,text,text,integer,integer,integer,text,text,text,smallint,numeric,text,integer,text,text,text,text,boolean,jsonb)',
       'public.complete_submission(uuid,jsonb)',
       'public.claim_stale_submissions(timestamptz,integer)',
       'public.delete_claimed_submission(uuid,uuid)',
@@ -199,6 +217,7 @@ insert into public.submissions (
   vehicle_model,
   vehicle_year,
   price,
+  price_currency,
   status,
   upload_state,
   expected_file_count,
@@ -212,6 +231,7 @@ values (
   'AutoPost lifecycle test',
   2021,
   24900,
+  'GEL',
   'new',
   'complete',
   5,
@@ -221,8 +241,29 @@ values (
   now()
 );
 
+select throws_like(
+  $$
+    update public.submissions
+    set status = 'delivered'
+    where idempotency_key_hash = 'v1:' || repeat('b', 64)
+  $$,
+  '%submissions_delivery_prerequisite_check%',
+  'delivered requires a saved delivery URL at the database boundary'
+);
+
+select throws_like(
+  $$
+    update public.submissions
+    set price_currency = 'EUR'
+    where idempotency_key_hash = 'v1:' || repeat('b', 64)
+  $$,
+  '%submissions_price_currency_check%',
+  'vehicle price currency is limited to GEL and USD'
+);
+
 update public.submissions
-set status = 'delivered'
+set status = 'delivered',
+    delivery_url = 'https://example.com/autopost-preview'
 where idempotency_key_hash = 'v1:' || repeat('b', 64);
 
 select ok(
@@ -268,8 +309,19 @@ select is(
   'repeating delivered status does not duplicate its lifecycle event'
 );
 
+select throws_like(
+  $$
+    update public.submissions
+    set status = 'converted'
+    where idempotency_key_hash = 'v1:' || repeat('b', 64)
+  $$,
+  '%submissions_conversion_prerequisite_check%',
+  'converted requires a positive paid amount at the database boundary'
+);
+
 update public.submissions
-set status = 'converted'
+set status = 'converted',
+    amount_paid = 14.90
 where idempotency_key_hash = 'v1:' || repeat('b', 64);
 
 select ok(

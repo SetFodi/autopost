@@ -11,7 +11,8 @@ export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
 export const maxDuration = 60
 
-const CLEANUP_BATCH_SIZE = 50
+const CLEANUP_BATCH_SIZE = 100
+const CLEANUP_CONCURRENCY = 10
 const STALE_SUBMISSION_MS = 24 * 60 * 60 * 1000
 const RATE_EVENT_RETENTION_MS = 7 * 24 * 60 * 60 * 1000
 
@@ -85,40 +86,52 @@ export async function GET(request: Request) {
         pathsBySubmission.set(file.submission_id, paths)
       }
 
-      for (const claim of claimed) {
-        const paths = pathsBySubmission.get(claim.submission_id) ?? []
-        if (paths.length > 0) {
-          const { error: removeError } = await service.storage
-            .from(SUBMISSION_BUCKET)
-            .remove(paths)
+      for (
+        let offset = 0;
+        offset < claimed.length;
+        offset += CLEANUP_CONCURRENCY
+      ) {
+        const batch = claimed.slice(offset, offset + CLEANUP_CONCURRENCY)
+        const results = await Promise.all(
+          batch.map(async (claim) => {
+            const paths = pathsBySubmission.get(claim.submission_id) ?? []
+            if (paths.length > 0) {
+              const { error: removeError } = await service.storage
+                .from(SUBMISSION_BUCKET)
+                .remove(paths)
 
-          if (removeError) {
-            console.error('[cron/cleanup] storage removal failed', {
-              submissionId: claim.submission_id,
-            })
-            failedSubmissionIds.push(claim.submission_id)
-            continue
-          }
-        }
+              if (removeError) {
+                console.error('[cron/cleanup] storage removal failed', {
+                  submissionId: claim.submission_id,
+                })
+                return { deleted: false, submissionId: claim.submission_id }
+              }
+            }
 
-        const { data: deleted, error: deleteError } = await service.rpc(
-          'delete_claimed_submission',
-          {
-            p_claim_token: claim.claim_token,
-            p_submission_id: claim.submission_id,
-          },
+            const { data: deleted, error: deleteError } = await service.rpc(
+              'delete_claimed_submission',
+              {
+                p_claim_token: claim.claim_token,
+                p_submission_id: claim.submission_id,
+              },
+            )
+
+            if (deleteError || !deleted) {
+              console.error('[cron/cleanup] claimed row deletion failed', {
+                code: deleteError?.code,
+                submissionId: claim.submission_id,
+              })
+              return { deleted: false, submissionId: claim.submission_id }
+            }
+
+            return { deleted: true, submissionId: claim.submission_id }
+          }),
         )
 
-        if (deleteError || !deleted) {
-          console.error('[cron/cleanup] claimed row deletion failed', {
-            code: deleteError?.code,
-            submissionId: claim.submission_id,
-          })
-          failedSubmissionIds.push(claim.submission_id)
-          continue
+        for (const result of results) {
+          if (result.deleted) deletedSubmissions += 1
+          else failedSubmissionIds.push(result.submissionId)
         }
-
-        deletedSubmissions += 1
       }
     }
   }

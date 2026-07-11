@@ -9,6 +9,8 @@ export const SUBMISSION_STATUSES = [
 
 export type SubmissionStatus = (typeof SUBMISSION_STATUSES)[number]
 
+export type VehiclePriceCurrency = 'GEL' | 'USD'
+
 export type AdminActionState = {
   kind: 'idle' | 'success' | 'error'
   message: string
@@ -32,6 +34,7 @@ export type AdminSubmissionListItem = {
   vehicle_model: string
   vehicle_year: number
   price: number | string
+  price_currency: VehiclePriceCurrency
   status: SubmissionStatus
   amount_paid: number | string | null
   created_at: string

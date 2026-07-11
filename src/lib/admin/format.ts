@@ -24,6 +24,19 @@ export function formatMoney(value: number | string | null | undefined) {
   }).format(number)}₾`
 }
 
+export function formatVehiclePrice(
+  value: number | string | null | undefined,
+  currency: 'GEL' | 'USD',
+) {
+  const number = typeof value === 'string' ? Number(value) : (value ?? 0)
+  if (!Number.isFinite(number)) return '—'
+
+  return `${new Intl.NumberFormat('ka-GE', {
+    minimumFractionDigits: number % 1 === 0 ? 0 : 2,
+    maximumFractionDigits: 2,
+  }).format(number)} ${currency}`
+}
+
 export function formatFileSize(bytes: number) {
   if (!Number.isFinite(bytes) || bytes <= 0) return '0 KB'
   if (bytes < 1024 * 1024) return `${Math.ceil(bytes / 1024)} KB`

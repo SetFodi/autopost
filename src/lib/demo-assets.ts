@@ -13,7 +13,7 @@ export const demoAssets = {
     src: '/demo/after-mercedes.jpg',
     alt: 'AutoPost-ის მზა სარეკლამო კადრი — Mercedes-AMG GT R',
     model: 'Mercedes-AMG GT R',
-    specs: '2020 · 28 000 კმ · ბენზინი · თბილისი',
+    specs: '2018 · 28 000 კმ · ბენზინი · თბილისი',
     price: '$118,500',
     objectPosition: 'object-[center_55%]',
   },

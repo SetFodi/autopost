@@ -9,7 +9,7 @@ import {
 
 import { StatusBadge } from '@/components/admin/status-badge'
 import { STATUS_DETAILS } from '@/lib/admin/constants'
-import { formatAdminDate, formatMoney } from '@/lib/admin/format'
+import { formatAdminDate, formatVehiclePrice } from '@/lib/admin/format'
 import {
   SUBMISSION_STATUSES,
   type AdminDashboardFilters,
@@ -190,7 +190,10 @@ export function SubmissionList({
                       <StatusBadge status={submission.status} />
                     </td>
                     <td className="px-4 py-4 align-middle text-sm font-semibold text-stone-300 tabular-nums">
-                      {formatMoney(submission.price)}
+                      {formatVehiclePrice(
+                        submission.price,
+                        submission.price_currency,
+                      )}
                     </td>
                     <td className="px-4 py-4 align-middle text-xs text-stone-500">
                       {formatAdminDate(submission.created_at)}
@@ -240,7 +243,10 @@ export function SubmissionList({
                       ფასი
                     </dt>
                     <dd className="mt-1 text-sm font-bold text-stone-200 tabular-nums">
-                      {formatMoney(submission.price)}
+                      {formatVehiclePrice(
+                        submission.price,
+                        submission.price_currency,
+                      )}
                     </dd>
                   </div>
                   <div className="col-span-2">

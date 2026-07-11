@@ -4,6 +4,7 @@ import {
   GEORGIAN_PHONE_ERROR,
   isValidGeorgianPhone,
 } from '@/lib/validation/phone'
+import { VEHICLE_PRICE_CURRENCIES } from '@/lib/validation/submission'
 
 const currentYear = new Date().getFullYear()
 const formattedPositiveNumber = /^\d[\d\s,]*(?:\.\d{1,2})?$/
@@ -48,6 +49,9 @@ export const publicSubmissionFormSchema = z.object({
       const amount = Number(value.replace(/[\s,]/g, ''))
       return Number.isFinite(amount) && amount > 0 && amount <= 100_000_000
     }, 'მიუთითე სწორი ფასი.'),
+  priceCurrency: z.enum(VEHICLE_PRICE_CURRENCIES, {
+    error: 'აირჩიე ფასის ვალუტა.',
+  }),
   mileage: z
     .string()
     .trim()

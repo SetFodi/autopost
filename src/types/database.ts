@@ -16,6 +16,8 @@ export type SubmissionStatus =
 
 export type SubmissionUploadState = 'pending' | 'complete' | 'failed'
 
+export type VehiclePriceCurrency = 'GEL' | 'USD'
+
 export type AnalyticsEventName =
   | 'landing_view'
   | 'primary_cta_click'
@@ -169,6 +171,7 @@ export type Database = {
           mileage: number | null
           phone: string
           price: number
+          price_currency: VehiclePriceCurrency
           public_reference: string
           request_fingerprint: string
           status: SubmissionStatus
@@ -199,6 +202,7 @@ export type Database = {
           mileage?: number | null
           phone: string
           price: number
+          price_currency: VehiclePriceCurrency
           public_reference?: string
           request_fingerprint: string
           status?: SubmissionStatus
@@ -229,6 +233,7 @@ export type Database = {
           mileage?: number | null
           phone?: string
           price?: number
+          price_currency?: VehiclePriceCurrency
           public_reference?: string
           request_fingerprint?: string
           status?: SubmissionStatus
@@ -256,6 +261,7 @@ export type Database = {
           p_mileage: number | null
           p_phone: string
           p_price: number
+          p_price_currency: VehiclePriceCurrency
           p_rate_limit: number
           p_request_rate_limit: number
           p_request_fingerprint: string

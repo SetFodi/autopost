@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 
+import { publicSubmissionFormSchema } from '@/components/forms/submission-form-schema'
 import {
   MAX_FILE_SIZE_BYTES,
   submissionInitSchema,
@@ -28,6 +29,7 @@ function validPayload() {
     vehicleModel: 'Mercedes-Benz GLE 450 4MATIC',
     vehicleYear: '2022',
     price: '42500',
+    priceCurrency: 'USD',
     mileage: '38000',
     engine: '3.0 Turbo',
     transmission: 'ავტომატიკა',
@@ -45,8 +47,19 @@ describe('submissionInitSchema', () => {
     expect(result.phone).toBe('+995555123456')
     expect(result.vehicleYear).toBe(2022)
     expect(result.price).toBe(42_500)
+    expect(result.priceCurrency).toBe('USD')
     expect(result.mileage).toBe(38_000)
     expect(result.files).toHaveLength(5)
+  })
+
+  it('requires a supported GEL or USD vehicle-price currency', () => {
+    expect(publicSubmissionFormSchema.parse(validPayload()).priceCurrency).toBe(
+      'USD',
+    )
+
+    const payload = { ...validPayload(), priceCurrency: 'EUR' }
+    expect(publicSubmissionFormSchema.safeParse(payload).success).toBe(false)
+    expect(submissionInitSchema.safeParse(payload).success).toBe(false)
   })
 
   it('requires the core vehicle fields', () => {

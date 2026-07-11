@@ -19,15 +19,21 @@ Live Supabase, Meta, WhatsApp, and Vercel acceptance remains intentionally pendi
 | `pnpm format:check` | Pass                                                     |
 | `pnpm typecheck`    | Pass                                                     |
 | `pnpm lint`         | Pass, zero warnings                                      |
-| `pnpm test`         | Pass, 8 files / 57 tests                                 |
+| `pnpm test`         | Pass, 15 files / 91 tests                                |
 | `pnpm build`        | Pass, production compile and static generation completed |
 | `pnpm audit --prod` | Pass, no known production dependency vulnerabilities     |
 | `git diff --check`  | Pass                                                     |
 | `pnpm test:db`      | Not run: a Docker-compatible runtime was unavailable     |
 
-The migration was also applied to a disposable PostgreSQL database. Smoke checks confirmed the broad request scope on replay, one stricter creation slot, the configured sixth new request being denied after five accepted attempts, retry timing, stale-claim cleanup, one lifecycle event per status transition, and no `anon` table privileges. The committed pgTAP suite remains the reproducible full local check once Docker/Supabase CLI is available.
+The migration was also applied to a disposable PostgreSQL database. Smoke checks confirmed the broad request scope on replay, one stricter creation slot, the configured fourth new request being denied after three accepted attempts, retry timing, stale-claim cleanup, one lifecycle event per status transition, and no `anon` table privileges. The committed pgTAP suite remains the reproducible full local check once Docker/Supabase CLI is available.
 
-Automated route coverage also verifies that an invalid completion capability is rejected before privileged reads and that stored bytes spoofing their declared image MIME never reach the completion transaction.
+Automated coverage also verifies that an invalid completion capability is
+rejected before privileged reads and that stored bytes spoofing their declared
+image MIME never reach the completion transaction. Client-photo tests verify
+that small JPEG, PNG, and WEBP sources all take the decode/canvas/re-encode path,
+orientation-aware dimensions are retained, output stays inside the existing
+limit, HEIC becomes JPEG only after a successful decode, an unsupported HEIC is
+rejected explicitly, and a batch is prepared sequentially.
 
 ## Responsive browser matrix
 
@@ -71,11 +77,30 @@ Run these after completing the external setup in the README:
 
 - Complete a real 5-photo and 15-photo submission against Supabase, including signed upload, object verification, completion, and one success/Lead transition.
 - Exercise a real HEIC/HEIF file and the native multi-photo picker on representative iOS and Android devices.
+- Upload a disposable orientation-tagged JPEG containing known EXIF/GPS values.
+  Confirm its preview remains upright and download the resulting private object
+  to verify those tags are absent. Repeat with PNG text/eXIf and WEBP EXIF/XMP
+  fixtures.
+- On a browser/device that cannot decode HEIC, confirm the form explains that
+  conversion is required, adds no photo, and sends no `/api/submissions/init`
+  request. On a compatible device, confirm the selected HEIC becomes a previewable
+  sanitized JPEG.
+- Select fifteen representative high-resolution phone photos and confirm
+  preparation completes sequentially without a tab reload or memory crash.
 - Throttle or interrupt a real Storage upload, confirm progress is understandable, then use retry without losing form state or duplicating the submission.
 - Confirm the configured rate limit from separate Vercel requests/instances; the underlying shared Postgres ledger and concurrency lock are already covered by migration checks.
+- Confirm the global capacity guard rejects a new intake once reservations cross the configured limit, while an idempotent replay still resolves normally.
 - Sign in as the allow-listed admin, then as a non-allow-listed user; verify reads and mutations are denied for the latter.
 - Review private images through expiring admin URLs and confirm anonymous listing/reading is impossible.
 - Persist every admin status, note, delivery URL, and amount; verify delivered/converted analytics are recorded once.
+- From a completed submission, open the Danger zone and verify the irreversible
+  button remains disabled until the exact public reference is typed. Delete a
+  disposable submission and confirm its private Storage objects disappear before
+  its submission/file rows, the admin list no longer finds it, and the old detail
+  URL returns not found.
+- Force one Storage-removal failure and confirm the database row remains; then
+  force a database failure after Storage succeeds and confirm the UI gives the
+  explicit safe-to-retry warning before a retry completes deletion.
 - Open the generated WhatsApp link on a real device and verify Georgian characters and line breaks.
 - Configure Meta Pixel and use Test Events/Pixel Helper to verify `PageView`, one `FormStarted`, and one post-completion `Lead`.
 - Deploy on Vercel, add the final domain/DNS, rerun this matrix on the production URL, and confirm canonical/sitemap origins.

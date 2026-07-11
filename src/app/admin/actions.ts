@@ -10,6 +10,12 @@ import {
   type AdminActionState,
   type SubmissionStatus,
 } from '@/lib/admin/types'
+import {
+  assertStatusPrerequisites,
+  DELIVERY_URL_REQUIRED_MESSAGE,
+  getStatusPrerequisiteIssue,
+  SubmissionStatusPrerequisiteError,
+} from '@/lib/admin/status-integrity'
 import { isValidDeliveryUrl } from '@/lib/admin/whatsapp'
 import { getServiceSupabaseClient } from '@/lib/supabase/admin'
 import { createServerSupabaseClient } from '@/lib/supabase/server'
@@ -34,16 +40,35 @@ const loginSchema = z.object({
   password: z.string().min(1).max(256),
 })
 
-const editorSchema = z.object({
-  id: uuidSchema,
-  status: statusSchema,
-  internalNotes: z
-    .string()
-    .max(5_000)
-    .transform((value) => value.trim()),
-  deliveryUrl: deliveryUrlSchema,
-  amountPaid: z.coerce.number().min(0).max(1_000_000),
-})
+const editorSchema = z
+  .object({
+    id: uuidSchema,
+    status: statusSchema,
+    internalNotes: z
+      .string()
+      .max(5_000)
+      .transform((value) => value.trim()),
+    deliveryUrl: deliveryUrlSchema,
+    amountPaid: z.coerce.number().min(0).max(1_000_000),
+  })
+  .superRefine((value, context) => {
+    const issue = getStatusPrerequisiteIssue(
+      value.status,
+      value.deliveryUrl,
+      value.amountPaid,
+    )
+    if (issue) {
+      context.addIssue({
+        code: 'custom',
+        message: issue,
+        path: [
+          issue === DELIVERY_URL_REQUIRED_MESSAGE
+            ? 'deliveryUrl'
+            : 'amountPaid',
+        ],
+      })
+    }
+  })
 
 type SubmissionPatch = Database['public']['Tables']['submissions']['Update']
 
@@ -53,6 +78,26 @@ async function updateSubmissionRecord(
   patch: SubmissionPatch,
 ) {
   const supabase = getServiceSupabaseClient()
+  const { data: current, error: currentError } = await supabase
+    .from('submissions')
+    .select('delivery_url, amount_paid')
+    .eq('id', id)
+    .eq('upload_state', 'complete')
+    .maybeSingle()
+
+  if (currentError || !current) {
+    console.error('[admin] Failed to load submission prerequisites', {
+      code: currentError?.code,
+    })
+    throw new Error('Submission update failed.')
+  }
+
+  const deliveryUrl =
+    patch.delivery_url === undefined ? current.delivery_url : patch.delivery_url
+  const amountPaid =
+    patch.amount_paid === undefined ? current.amount_paid : patch.amount_paid
+  assertStatusPrerequisites(nextStatus, deliveryUrl, amountPaid)
+
   const update: SubmissionPatch = {
     ...patch,
     status: nextStatus,
@@ -166,8 +211,14 @@ export async function updateSubmissionAction(
       kind: 'success',
       message: 'ცვლილებები შენახულია.',
     }
-  } catch {
-    return { kind: 'error', message: 'ცვლილებების შენახვა ვერ მოხერხდა.' }
+  } catch (error) {
+    return {
+      kind: 'error',
+      message:
+        error instanceof SubmissionStatusPrerequisiteError
+          ? error.message
+          : 'ცვლილებების შენახვა ვერ მოხერხდა.',
+    }
   }
 }
 
@@ -193,6 +244,23 @@ export async function saveDeliveryUrlAction(
 
   try {
     const supabase = getServiceSupabaseClient()
+    const { data: current, error: currentError } = await supabase
+      .from('submissions')
+      .select('id, status, amount_paid')
+      .eq('id', parsed.data.id)
+      .eq('upload_state', 'complete')
+      .maybeSingle()
+
+    if (currentError || !current) {
+      throw currentError ?? new Error('Submission not found.')
+    }
+
+    assertStatusPrerequisites(
+      current.status,
+      parsed.data.deliveryUrl || null,
+      current.amount_paid,
+    )
+
     const { data, error } = await supabase
       .from('submissions')
       .update({
@@ -207,8 +275,14 @@ export async function saveDeliveryUrlAction(
     if (error || !data) throw error ?? new Error('Submission not found.')
     refreshSubmissionRoutes(parsed.data.id)
     return { kind: 'success', message: 'მიწოდების ბმული შენახულია.' }
-  } catch {
-    return { kind: 'error', message: 'ბმულის შენახვა ვერ მოხერხდა.' }
+  } catch (error) {
+    return {
+      kind: 'error',
+      message:
+        error instanceof SubmissionStatusPrerequisiteError
+          ? error.message
+          : 'ბმულის შენახვა ვერ მოხერხდა.',
+    }
   }
 }
 

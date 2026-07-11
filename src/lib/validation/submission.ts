@@ -9,6 +9,10 @@ export const MAX_FILE_SIZE_BYTES = 12 * 1024 * 1024
 export const MAX_TOTAL_UPLOAD_SIZE_BYTES = 120 * 1024 * 1024
 export const MAX_SUBMISSION_JSON_BYTES = 64 * 1024
 
+export const VEHICLE_PRICE_CURRENCIES = ['GEL', 'USD'] as const
+
+export type VehiclePriceCurrency = (typeof VEHICLE_PRICE_CURRENCIES)[number]
+
 export const ALLOWED_IMAGE_MIME_TYPES = [
   'image/jpeg',
   'image/png',
@@ -85,6 +89,9 @@ export const submissionInitSchema = z
       .number()
       .positive('მიუთითეთ ავტომობილის ფასი.')
       .max(100_000_000, 'მიუთითეთ სწორი ფასი.'),
+    priceCurrency: z.enum(VEHICLE_PRICE_CURRENCIES, {
+      error: 'მიუთითეთ ფასის ვალუტა.',
+    }),
     mileage: optionalInteger(10_000_000),
     engine: optionalText('ძრავი', 80),
     transmission: optionalText('ტრანსმისია', 80),

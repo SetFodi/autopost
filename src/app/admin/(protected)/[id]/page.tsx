@@ -25,13 +25,18 @@ import {
 } from 'lucide-react'
 
 import { changeSubmissionStatusAction } from '@/app/admin/actions'
+import { DeleteSubmissionControl } from '@/components/admin/delete-submission-control'
 import { PendingButton } from '@/components/admin/pending-button'
 import { PhotoGallery } from '@/components/admin/photo-gallery'
 import { StatusBadge } from '@/components/admin/status-badge'
 import { SubmissionEditor } from '@/components/admin/submission-editor'
 import { WhatsAppWorkflow } from '@/components/admin/whatsapp-workflow'
 import { requireAdmin } from '@/lib/admin/auth'
-import { formatAdminDate, formatMoney } from '@/lib/admin/format'
+import {
+  formatAdminDate,
+  formatMoney,
+  formatVehiclePrice,
+} from '@/lib/admin/format'
 import { getAdminSubmission } from '@/lib/admin/queries'
 import type { SubmissionStatus } from '@/lib/admin/types'
 
@@ -159,7 +164,9 @@ export default async function SubmissionDetailPage({
           <p className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-stone-500">
             <span>{submission.vehicle_year}</span>
             <span aria-hidden="true">·</span>
-            <span>{formatMoney(submission.price)}</span>
+            <span>
+              {formatVehiclePrice(submission.price, submission.price_currency)}
+            </span>
             <span aria-hidden="true">·</span>
             <span>{submission.photos.length} ფოტო</span>
           </p>
@@ -168,6 +175,13 @@ export default async function SubmissionDetailPage({
         <div className="flex flex-wrap gap-2">
           {QUICK_ACTIONS.map((action) => {
             const Icon = action.icon
+            const missingDeliveryUrl =
+              (action.status === 'delivered' ||
+                action.status === 'converted') &&
+              !submission.delivery_url?.trim()
+            const missingPayment =
+              action.status === 'converted' &&
+              Number(submission.amount_paid ?? 0) <= 0
             return (
               <form
                 key={action.status}
@@ -178,7 +192,11 @@ export default async function SubmissionDetailPage({
                 )}
               >
                 <PendingButton
-                  disabled={submission.status === action.status}
+                  disabled={
+                    submission.status === action.status ||
+                    missingDeliveryUrl ||
+                    missingPayment
+                  }
                   pendingLabel={action.pendingLabel}
                   className={`inline-flex min-h-10 items-center justify-center gap-2 rounded-xl border px-3 text-xs font-bold transition focus-visible:outline-2 focus-visible:outline-orange-400 ${action.className}`}
                 >
@@ -236,7 +254,10 @@ export default async function SubmissionDetailPage({
               />
               <DetailItem
                 label="წელი / ფასი"
-                value={`${submission.vehicle_year} · ${formatMoney(submission.price)}`}
+                value={`${submission.vehicle_year} · ${formatVehiclePrice(
+                  submission.price,
+                  submission.price_currency,
+                )}`}
                 icon={
                   <CircleDollarSign aria-hidden="true" className="size-3.5" />
                 }
@@ -368,6 +389,11 @@ export default async function SubmissionDetailPage({
               </div>
             </dl>
           </section>
+
+          <DeleteSubmissionControl
+            submissionId={submission.id}
+            publicReference={submission.public_reference}
+          />
         </aside>
       </div>
     </main>

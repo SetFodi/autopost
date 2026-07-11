@@ -83,6 +83,7 @@ function initBody(website = '') {
     vehicleModel: 'BMW 330i',
     vehicleYear: 2022,
     price: 42_500,
+    priceCurrency: 'GEL',
     mileage: 38_000,
     engine: '2.0 Turbo',
     transmission: 'ავტომატიკა',
@@ -108,6 +109,7 @@ function request(path: string, body: unknown, headers: HeadersInit = {}) {
 
 function initService(
   options: {
+    capacityExceeded?: boolean
     idempotencyConflict?: boolean
     rateLimited?: boolean
     wasExisting?: boolean
@@ -115,25 +117,32 @@ function initService(
   } = {},
 ) {
   const rows = storageRows()
-  const rpc = vi.fn().mockResolvedValue({
-    data: [
-      {
-        submission_id:
-          options.rateLimited || options.idempotencyConflict
-            ? null
-            : SUBMISSION_ID,
-        public_reference:
-          options.rateLimited || options.idempotencyConflict
-            ? null
-            : PUBLIC_REFERENCE,
-        idempotency_conflict: options.idempotencyConflict ?? false,
-        rate_limited: options.rateLimited ?? false,
-        retry_after_seconds: options.rateLimited ? 900 : 0,
-        was_existing: options.wasExisting ?? false,
-      },
-    ],
-    error: null,
-  })
+  const rpc = vi.fn().mockResolvedValue(
+    options.capacityExceeded
+      ? {
+          data: null,
+          error: { code: 'P0001', message: 'intake_capacity_exceeded' },
+        }
+      : {
+          data: [
+            {
+              submission_id:
+                options.rateLimited || options.idempotencyConflict
+                  ? null
+                  : SUBMISSION_ID,
+              public_reference:
+                options.rateLimited || options.idempotencyConflict
+                  ? null
+                  : PUBLIC_REFERENCE,
+              idempotency_conflict: options.idempotencyConflict ?? false,
+              rate_limited: options.rateLimited ?? false,
+              retry_after_seconds: options.rateLimited ? 900 : 0,
+              was_existing: options.wasExisting ?? false,
+            },
+          ],
+          error: null,
+        },
+  )
   const order = vi.fn().mockResolvedValue({
     data: rows.map((row) => ({
       sort_order: row.sort_order,
@@ -282,7 +291,8 @@ describe('POST /api/submissions/init', () => {
       'begin_submission',
       expect.objectContaining({
         p_phone: '+995555123456',
-        p_rate_limit: 5,
+        p_price_currency: 'GEL',
+        p_rate_limit: 3,
         p_request_rate_limit: 30,
         p_submission_id: expect.any(String),
       }),
@@ -313,6 +323,21 @@ describe('POST /api/submissions/init', () => {
 
     expect(response.status).toBe(429)
     expect(response.headers.get('Retry-After')).toBe('900')
+    expect(service.createSignedUploadUrl).not.toHaveBeenCalled()
+  })
+
+  it('returns a retryable limit response when global intake capacity is full', async () => {
+    const service = initService({ capacityExceeded: true })
+    serviceMocks.getServiceSupabaseClient.mockReturnValue(service)
+
+    const response = await initializeSubmission(
+      request('/api/submissions/init', initBody(), {
+        'Idempotency-Key': IDEMPOTENCY_KEY,
+      }),
+    )
+
+    expect(response.status).toBe(429)
+    expect(response.headers.get('Retry-After')).toBe('86400')
     expect(service.createSignedUploadUrl).not.toHaveBeenCalled()
   })
 

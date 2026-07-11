@@ -32,7 +32,7 @@ describe('admin authorization boundary', () => {
   beforeEach(() => {
     process.env.ADMIN_EMAIL = 'admin@autopost.ge'
     process.env.NEXT_PUBLIC_SUPABASE_URL = 'https://example.supabase.co'
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY = 'public-key'
+    process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY = 'public-key'
     authMocks.redirect.mockClear()
     authMocks.createServerSupabaseClient.mockReset()
   })

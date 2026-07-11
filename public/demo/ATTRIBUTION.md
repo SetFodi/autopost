@@ -9,11 +9,16 @@ replace these before any advertising launches.
 From Wikimedia Commons (amateur street/parking-lot photography chosen to look
 like real seller listing photos):
 
-| File                  | Source                                                                                 | Author               | License      |
-| --------------------- | -------------------------------------------------------------------------------------- | -------------------- | ------------ |
-| `before-mercedes.jpg` | Commons: “2018 Mercedes-Benz AMG GT-R, designo matte Selenite Grey Magno, front right” | Mr.choppers          | CC BY-SA 3.0 |
-| `before-toyota.jpg`   | Commons: “Toyota Camry (XV70) SE (2), United States”                                   | Ghostofakina         | CC BY-SA 4.0 |
-| `before-vw.jpg`       | Commons: “Volkswagen Polo Mk5 (facelift) — Granville Road, Gillingham, Medway”         | Sunolafjagtenben-hur | CC0          |
+| File                  | Source                                                                                                                                                                                                            | Author               | License                                                         |
+| --------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------- | --------------------------------------------------------------- |
+| `before-mercedes.jpg` | [Commons: “2018 Mercedes-Benz AMG GT-R, designo matte Selenite Grey Magno, front right”](https://commons.wikimedia.org/wiki/File:2018_Mercedes-Benz_AMG_GT-R,_designo_matte_Selenite_Grey_Magno,_front_right.jpg) | Mr.choppers          | [CC BY-SA 3.0](https://creativecommons.org/licenses/by-sa/3.0/) |
+| `before-toyota.jpg`   | [Commons: “Toyota Camry (XV70) SE (2), United States”](<https://commons.wikimedia.org/wiki/File:Toyota_Camry_(XV70)_SE_(2),_United_States.jpg>)                                                                   | Ghostofakina         | [CC BY-SA 4.0](https://creativecommons.org/licenses/by-sa/4.0/) |
+| `before-vw.jpg`       | [Commons: “Volkswagen Polo Mk5 (facelift) — Granville Road, Gillingham, Medway”](<https://commons.wikimedia.org/wiki/File:Volkswagen_Polo_Mk5_(facelift)_-_Granville_Road,_Gillingham,_Medway.jpg>)               | Sunolafjagtenben-hur | [CC0 1.0](https://creativecommons.org/publicdomain/zero/1.0/)   |
+
+The local copies were resized, cropped where needed by the interface, and
+compressed for web delivery. The Mercedes and Toyota adaptations remain under
+their respective CC BY-SA terms; this attribution file must stay with any
+redistribution of those adapted demo assets.
 
 ## "After" / format photos — professional shots
 

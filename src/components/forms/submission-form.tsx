@@ -16,7 +16,8 @@ import type { SelectedPhoto } from '@/components/forms/photo-types'
 import {
   canPreviewPhoto,
   createPhotoFingerprint,
-  preparePhoto,
+  getPhotoPreparationErrorMessage,
+  preparePhotos,
   validatePreparedPhotos,
   validateRawPhotos,
   withReliableMimeType,
@@ -37,6 +38,7 @@ import {
   MAX_PHOTO_COUNT,
   MIN_PHOTO_COUNT,
   SUBMISSION_BUCKET,
+  VEHICLE_PRICE_CURRENCIES,
   type AllowedImageMimeType,
   type SubmissionCompleteInput,
   type SubmissionInitInput,
@@ -87,6 +89,7 @@ const defaultValues: PublicSubmissionFormValues = {
   vehicleModel: '',
   vehicleYear: '',
   price: '',
+  priceCurrency: 'GEL',
   mileage: '',
   engine: '',
   transmission: '',
@@ -171,6 +174,7 @@ export function SubmissionForm({ whatsappNumber }: SubmissionFormProps) {
   const attemptKeyRef = useRef<string | null>(null)
   const uploadAttemptRef = useRef<UploadAttempt | null>(null)
   const submittingLockRef = useRef(false)
+  const preparingLockRef = useRef(false)
   const formStartedRef = useRef(false)
   const photosRef = useRef<SelectedPhoto[]>([])
 
@@ -230,13 +234,13 @@ export function SubmissionForm({ whatsappNumber }: SubmissionFormProps) {
   }
 
   async function addPhotos(incomingFiles: File[]) {
-    if (isBusy) return
+    if (isBusy || preparingLockRef.current) return
     markFormStarted()
     invalidateRecoverableAttempt()
     setPhotoError(null)
 
     const existingFingerprints = new Set(
-      photos.map((photo) => createPhotoFingerprint(photo.file)),
+      photos.map((photo) => photo.sourceFingerprint),
     )
     const batchFingerprints = new Set<string>()
     const uniqueRawFiles = incomingFiles.filter((file) => {
@@ -265,11 +269,13 @@ export function SubmissionForm({ whatsappNumber }: SubmissionFormProps) {
       return
     }
 
+    preparingLockRef.current = true
     setPhase('preparing')
     try {
-      const preparedFiles = await Promise.all(
-        uniqueRawFiles.map((file) => preparePhoto(withReliableMimeType(file))),
+      const preparedPhotos = await preparePhotos(
+        uniqueRawFiles.map((file) => withReliableMimeType(file)),
       )
+      const preparedFiles = preparedPhotos.map((photo) => photo.file)
       const preparedError = validatePreparedPhotos(
         preparedFiles,
         photos.map((photo) => photo.file),
@@ -279,13 +285,19 @@ export function SubmissionForm({ whatsappNumber }: SubmissionFormProps) {
         return
       }
 
-      const selectedPhotos = preparedFiles.map<SelectedPhoto>((file) => ({
-        id: crypto.randomUUID(),
-        file,
-        previewUrl: canPreviewPhoto(file) ? URL.createObjectURL(file) : null,
-        status: 'ready',
-        progress: 0,
-      }))
+      const selectedPhotos = preparedPhotos.map<SelectedPhoto>(
+        (photo, index) => ({
+          id: crypto.randomUUID(),
+          file: photo.file,
+          sourceFingerprint: createPhotoFingerprint(uniqueRawFiles[index]!),
+          metadataSanitized: photo.metadataSanitized,
+          previewUrl: canPreviewPhoto(photo.file)
+            ? URL.createObjectURL(photo.file)
+            : null,
+          status: 'ready',
+          progress: 0,
+        }),
+      )
       setPhotos((current) => [...current, ...selectedPhotos])
       trackInternalEvent('photo_added', {
         metadata: {
@@ -293,7 +305,10 @@ export function SubmissionForm({ whatsappNumber }: SubmissionFormProps) {
           totalCount: photos.length + selectedPhotos.length,
         },
       })
+    } catch (error) {
+      setPhotoError(getPhotoPreparationErrorMessage(error))
     } finally {
+      preparingLockRef.current = false
       setPhase('idle')
     }
   }
@@ -335,6 +350,7 @@ export function SubmissionForm({ whatsappNumber }: SubmissionFormProps) {
       vehicleModel: values.vehicleModel.trim(),
       vehicleYear: Number(values.vehicleYear),
       price: numericValue(values.price),
+      priceCurrency: values.priceCurrency,
       mileage: values.mileage?.trim()
         ? numericValue(values.mileage)
         : undefined,
@@ -623,7 +639,7 @@ export function SubmissionForm({ whatsappNumber }: SubmissionFormProps) {
           ) : null}
         </div>
 
-        <div className="grid grid-cols-2 gap-3 sm:gap-5">
+        <div className="grid gap-3 sm:grid-cols-3 sm:gap-5">
           <div>
             <label htmlFor="vehicleYear" className="form-label">
               გამოშვების წელი <span aria-hidden="true">*</span>
@@ -664,6 +680,31 @@ export function SubmissionForm({ whatsappNumber }: SubmissionFormProps) {
             {errors.price ? (
               <p id="price-error" role="alert" className="form-error">
                 {errors.price.message}
+              </p>
+            ) : null}
+          </div>
+          <div>
+            <label htmlFor="priceCurrency" className="form-label">
+              ვალუტა <span aria-hidden="true">*</span>
+            </label>
+            <select
+              id="priceCurrency"
+              className="form-input"
+              aria-invalid={Boolean(errors.priceCurrency)}
+              aria-describedby={
+                errors.priceCurrency ? 'price-currency-error' : undefined
+              }
+              {...register('priceCurrency')}
+            >
+              {VEHICLE_PRICE_CURRENCIES.map((currency) => (
+                <option key={currency} value={currency}>
+                  {currency === 'GEL' ? '₾ GEL' : '$ USD'}
+                </option>
+              ))}
+            </select>
+            {errors.priceCurrency ? (
+              <p id="price-currency-error" role="alert" className="form-error">
+                {errors.priceCurrency.message}
               </p>
             ) : null}
           </div>

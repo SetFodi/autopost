@@ -18,9 +18,11 @@ Included:
 - replaceable before/after hero media with polished local fallbacks
 - short vehicle form with Georgian phone normalization
 - 5–15 image selection, preview, removal, progress, retry, and duplicate-click protection
+- local orientation-preserving photo re-encoding that strips EXIF/GPS before upload
 - short-lived direct upload tokens for the private Supabase bucket
 - server verification of every expected object, declared MIME, file signature, structure, and safe dimensions before completion
 - two-scope database-backed, per-IP rate limiting with a keyed IP hash
+- an atomic global Storage-capacity reservation guard sized for the Free tier
 - authenticated daily cleanup of abandoned uploads and expired rate-limit rows
 - invisible honeypot and server-side count, size, MIME, and metadata validation
 - internal product analytics and conditional Meta Pixel events
@@ -49,12 +51,30 @@ The upload flow is designed for Vercel rather than a long-lived server:
 2. The server hashes the request IP with `RATE_LIMIT_IP_HASH_SECRET`.
 3. A Postgres RPC consumes a broad init-request limit before idempotency lookup, so replays cannot generate unlimited signed upload URLs.
 4. An idempotency key prevents duplicate submissions; genuinely new rows also consume the stricter new-submission limit.
-5. Supabase creates one short-lived signed upload token per generated object path; the server also returns an HMAC completion capability bound to the submission.
-6. The browser uploads files directly to the private `vehicle-uploads` bucket.
-7. `/api/submissions/complete` rejects invalid capabilities before privileged reads, then verifies every expected object’s path, size, declared MIME, bounded byte signature/structure, and safe dimensions before marking it complete.
-8. Only after completion does the browser enter the success state and fire Meta `Lead` once.
+5. Before any file row is created, Postgres serializes a global capacity check. Incomplete files reserve the bucket's 12 MiB object maximum; completed files reserve their server-verified declared sizes.
+6. Before init, the browser validates each source header, decodes with source orientation, bounds it to 3000 px, and canvas-re-encodes it. The selected upload file is always a new pixel-only JPEG, PNG, or WEBP; raw JPG/PNG/WEBP bytes never pass through just because they are small.
+7. Photos are prepared sequentially so selecting the 15-photo maximum does not decode 15 full-resolution sources at once. HEIC/HEIF becomes a sanitized JPEG only when the browser can decode it; otherwise selection fails with an explicit conversion message and no raw HEIC/HEIF is uploaded.
+8. Supabase creates one short-lived signed upload token per generated object path; the server also returns an HMAC completion capability bound to the submission.
+9. The browser uploads only those prepared files directly to the private `vehicle-uploads` bucket.
+10. `/api/submissions/complete` rejects invalid capabilities before privileged reads, then verifies every expected object’s path, size, declared MIME, bounded byte signature/structure, and safe dimensions before marking it complete.
+11. Only after completion does the browser enter the success state and fire Meta `Lead` once.
 
 There is no in-memory rate-limit counter. Vercel instances are ephemeral; both throttle scopes are deliberately persisted in Postgres. A daily authenticated cron removes globally expired rate rows and stale incomplete submissions after first claiming them atomically. It deletes private objects through the Storage API before deleting the matching database row.
+
+### Source-photo privacy and compatibility
+
+Canvas serialization starts from decoded pixels, so source EXIF, GPS, XMP, text
+chunks, and camera metadata are not copied into the new upload body. JPEG and
+WEBP use a high-quality 0.92 starting encode; PNG remains lossless when it fits
+the existing 12 MiB limit and can fall back to alpha-preserving WEBP. Orientation
+metadata is applied during decode before the sanitized pixels are written, so a
+portrait photo does not become sideways when its EXIF block disappears.
+
+This is fail-closed. Decode, canvas, or encoder failure returns a readable error
+and creates no upload target. HEIC/HEIF support therefore depends on the current
+browser/device decoder; AutoPost never silently uploads an undecodable original
+while claiming its metadata was stripped. The existing 30 MiB raw, 12 MiB
+prepared-file, and 120 MiB total limits remain unchanged.
 
 ## Local setup
 
@@ -79,12 +99,14 @@ Copy `.env.example` to `.env.local`.
 | Variable                                 | Required          | Purpose                                                                       |
 | ---------------------------------------- | ----------------- | ----------------------------------------------------------------------------- |
 | `NEXT_PUBLIC_SUPABASE_URL`               | yes               | Supabase project URL                                                          |
-| `NEXT_PUBLIC_SUPABASE_ANON_KEY`          | yes               | Browser-safe publishable/legacy anon key; never use the service key here      |
-| `SUPABASE_SERVICE_ROLE_KEY`              | yes               | Server-only intake, verification, analytics, and admin access                 |
+| `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`   | yes               | Modern browser-safe key; never put a secret key in a `NEXT_PUBLIC_` variable  |
+| `SUPABASE_SECRET_KEY`                    | yes               | Modern server-only key for intake, verification, analytics, and admin access  |
+| `NEXT_PUBLIC_SUPABASE_ANON_KEY`          | legacy fallback   | Accepted when the modern publishable-key variable is absent                   |
+| `SUPABASE_SERVICE_ROLE_KEY`              | legacy fallback   | Accepted when the modern secret-key variable is absent                        |
 | `ADMIN_EMAIL`                            | yes for admin     | Exact email allowed into `/admin`; every server page/action re-checks it      |
 | `RATE_LIMIT_IP_HASH_SECRET`              | yes in production | Secret used to HMAC IPs before the database-backed rate-limit event is stored |
 | `CRON_SECRET`                            | yes in production | Separate 32+ character bearer secret Vercel sends to the cleanup route        |
-| `SUBMISSION_RATE_LIMIT_MAX`              | no                | Maximum new intake attempts per window; defaults to a conservative value      |
+| `SUBMISSION_RATE_LIMIT_MAX`              | no                | Maximum new intake attempts per window; defaults to 3                         |
 | `SUBMISSION_INIT_REQUEST_RATE_LIMIT_MAX` | no                | Broader cap for every valid init request, including idempotent replays        |
 | `SUBMISSION_RATE_LIMIT_WINDOW_MINUTES`   | no                | Rate-limit window length                                                      |
 | `NEXT_PUBLIC_WHATSAPP_NUMBER`            | no                | Support WhatsApp number, ideally `9955XXXXXXXX`                               |
@@ -99,7 +121,7 @@ Generate the IP hashing secret locally:
 openssl rand -hex 32
 ```
 
-Generate `CRON_SECRET` separately with the same command. Do not expose `SUPABASE_SERVICE_ROLE_KEY`, `RATE_LIMIT_IP_HASH_SECRET`, or `CRON_SECRET` through a `NEXT_PUBLIC_` name.
+Generate `CRON_SECRET` separately with the same command. Do not expose `SUPABASE_SECRET_KEY`, `SUPABASE_SERVICE_ROLE_KEY`, `RATE_LIMIT_IP_HASH_SECRET`, or `CRON_SECRET` through a `NEXT_PUBLIC_` name.
 
 ## Supabase project and database setup
 
@@ -124,7 +146,9 @@ pnpm test:db
 
 `db reset` applies the migration and development-only seed. `test:db` runs the pgTAP checks for RLS, denied public privileges, the private bucket, and the persisted per-IP rate-limit behavior. A Docker-compatible runtime must be running.
 
-The migrations create the submission, file, analytics, and rate-limit tables; constraints and indexes; updated-at handling; the atomic rate-limit function; private bucket configuration; explicit Data API grants for `service_role`; and RLS on every exposed public table. Public roles receive no list/read access to submission data.
+The migrations create the submission, file, analytics, and rate-limit tables; constraints and indexes; updated-at handling; atomic per-IP throttles; a global intake-capacity guard; private bucket configuration; explicit Data API grants for `service_role`; and RLS on every exposed public table. Public roles receive no list/read access to submission data.
+
+The global guard defaults to **768 MiB**, leaving headroom below the Free plan's 1 GB file-storage quota. It is deliberately conservative while uploads are incomplete: every pending object reserves the bucket's full 12 MiB limit, so a forged small browser-reported size cannot over-admit uploads. After upgrading Storage capacity, raise `private.intake_capacity_config.max_reserved_bytes` explicitly in a reviewed forward migration; do not remove the guard.
 
 After applying migrations, use the Supabase database advisors and resolve any environment-specific warnings before launch.
 
@@ -132,7 +156,38 @@ After applying migrations, use the Supabase database advisors and resolve any en
 
 `vercel.json` invokes `GET /api/cron/cleanup` daily at `03:23 UTC`. Vercel sends `Authorization: Bearer $CRON_SECRET`; the route rejects requests when the secret is missing or mismatched. Configure `CRON_SECRET` in the Vercel Production environment before deployment.
 
-Each run claims at most 50 pending/failed submissions older than 24 hours using row locks and a short claim lease, removes their tracked objects through the private Storage API, then deletes only rows whose claim token still matches. Duplicate or overlapping invocations are safe, and a crashed claim becomes retryable. Rate-limit rows older than seven days are deleted globally through an indexed cutoff, covering attackers that rotate IPs and never revisit the same key.
+Each run claims at most 100 pending/failed submissions older than 24 hours using row locks and a short claim lease. It processes up to 10 claims concurrently, while preserving Storage deletion before database deletion for each submission, then deletes only rows whose claim token still matches. Duplicate or overlapping invocations are safe, and a crashed claim becomes retryable. Rate-limit rows older than seven days are deleted globally through an indexed cutoff, covering attackers that rotate IPs and never revisit the same key.
+
+This cron does **not** automatically delete completed customer submissions. No
+completed-submission retention period has been adopted for this validation MVP,
+so the repository does not invent one. Completed records are removed manually
+when the operator approves a verified customer request or another documented
+business/legal reason. Revisit and document a fixed retention period before the
+MVP's processing purpose or operating scale changes.
+
+### Manual deletion of a completed submission
+
+The protected submission detail page includes a **Danger zone** for the exact
+allow-listed admin. Deletion requires retyping the submission's public reference
+and is irreversible. The server always removes every tracked object from the
+private `vehicle-uploads` bucket first. Only after Storage confirms success does
+one Postgres `DELETE` remove the submission and atomically cascade its
+`submission_files` rows. Existing analytics events contain no form values and
+are detached from the deleted submission by the foreign key's `ON DELETE SET
+NULL` behavior.
+
+Partial failures are deliberately recoverable:
+
+- if Storage deletion fails, the database is untouched;
+- if Storage succeeds but the database delete cannot be confirmed, the server
+  checks whether the row is already gone and otherwise returns an explicit
+  safe-to-retry warning;
+- retrying is safe because removing an already-absent object is idempotent;
+- a successful deletion returns the admin to the submission list.
+
+Follow [`docs/data-deletion-sop.md`](docs/data-deletion-sop.md) for requester
+verification, failure handling, final checks, and removal of any separately
+managed delivery folder.
 
 ### Private storage bucket
 
@@ -201,6 +256,11 @@ Events contain an event name, optional submission ID, and small non-sensitive me
 9. Admin marks the submission `delivered`.
 10. If the customer pays 14.90₾, admin marks it `converted` and records the amount.
 
+When a verified deletion request arrives, pause fulfillment, follow the deletion
+SOP, and permanently delete the submission from its protected detail page.
+Prepared files stored in an external Drive folder are outside Supabase Storage
+and must be removed separately as part of the same request.
+
 AutoPost does not publish on the customer’s behalf in this release.
 
 ## Development commands
@@ -221,11 +281,12 @@ pnpm start         # run the production build
 
 1. Push the repository to GitHub or import it directly into Vercel.
 2. Keep the detected framework as **Next.js** and package manager as **pnpm**.
-3. Add all required server variables and desired optional public variables to Production and Preview environments.
-4. Set `NEXT_PUBLIC_SITE_URL` to the canonical production URL.
-5. Apply the Supabase migration before the first live submission.
-6. Deploy, then run the mobile upload, admin login, private-photo, WhatsApp, and Pixel test flows.
-7. Add the final domain in Vercel and update DNS.
+3. Add the production Supabase URL/keys, `ADMIN_EMAIL`, `RATE_LIMIT_IP_HASH_SECRET`, `CRON_SECRET`, and desired public settings to the **Production** environment only.
+4. Do not give arbitrary Preview deployments production Supabase credentials or the production Pixel ID. Either leave backend variables absent (presentation-only previews) or use a separate staging Supabase project, staging admin, distinct secrets, and a staging/test Pixel.
+5. Set the Production `NEXT_PUBLIC_SITE_URL` to the canonical production URL; previews can omit it and use their Vercel deployment origin.
+6. Apply the Supabase migrations before the first live submission.
+7. Deploy, then run the mobile upload, admin login, private-photo, WhatsApp, and Pixel test flows.
+8. Add the final domain in Vercel and update DNS.
 
 External setup requiring account credentials remains intentionally manual: create the Supabase project, confirm/create the private bucket, create the first admin, obtain the Meta Pixel ID, deploy to Vercel, and buy/configure the domain. Check `autopost.ge` availability with a Georgian registrar early; availability is not assumed by this repository.
 
