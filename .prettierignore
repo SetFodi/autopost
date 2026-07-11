@@ -1,0 +1,8 @@
+.next
+coverage
+node_modules
+pnpm-lock.yaml
+supabase/**/*.sql
+AGENTS.md
+eslint.config.mjs
+postcss.config.mjs

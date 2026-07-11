@@ -1,0 +1,906 @@
+'use client'
+
+import { useEffect, useRef, useState, type FormEvent } from 'react'
+import { zodResolver } from '@hookform/resolvers/zod'
+import {
+  AlertCircle,
+  Check,
+  LoaderCircle,
+  LockKeyhole,
+  Send,
+} from 'lucide-react'
+import { useForm } from 'react-hook-form'
+
+import { PhotoDropzone } from '@/components/forms/photo-dropzone'
+import type { SelectedPhoto } from '@/components/forms/photo-types'
+import {
+  canPreviewPhoto,
+  createPhotoFingerprint,
+  preparePhoto,
+  validatePreparedPhotos,
+  validateRawPhotos,
+  withReliableMimeType,
+} from '@/components/forms/photo-utils'
+import {
+  publicSubmissionFormSchema,
+  type PublicSubmissionFormValues,
+} from '@/components/forms/submission-form-schema'
+import { SubmissionSuccess } from '@/components/forms/submission-success'
+import { trackInternalEvent } from '@/lib/analytics/client'
+import {
+  trackMetaFormStarted,
+  trackMetaLeadOnce,
+} from '@/lib/analytics/meta-pixel'
+import { createBrowserSupabaseClient } from '@/lib/supabase/client'
+import { normalizeGeorgianPhone } from '@/lib/validation/phone'
+import {
+  MAX_PHOTO_COUNT,
+  MIN_PHOTO_COUNT,
+  SUBMISSION_BUCKET,
+  type AllowedImageMimeType,
+  type SubmissionCompleteInput,
+  type SubmissionInitInput,
+} from '@/lib/validation/submission'
+
+type SubmissionPhase =
+  | 'idle'
+  | 'preparing'
+  | 'initializing'
+  | 'uploading'
+  | 'completing'
+  | 'error'
+  | 'success'
+
+interface InitUpload {
+  fileIndex: number
+  path: string
+  token: string
+}
+
+interface InitResponse {
+  submissionId: string
+  publicReference: string
+  completionToken: string
+  uploads: InitUpload[]
+}
+
+interface UploadAttempt {
+  init: InitResponse
+  uploadedIndexes: Set<number>
+}
+
+interface SuccessDetails {
+  publicReference: string
+  vehicleModel: string
+  photoCount: number
+}
+
+interface SubmissionFormProps {
+  whatsappNumber?: string
+}
+
+class SubmissionError extends Error {}
+
+const defaultValues: PublicSubmissionFormValues = {
+  phone: '',
+  customerName: '',
+  vehicleModel: '',
+  vehicleYear: '',
+  price: '',
+  mileage: '',
+  engine: '',
+  transmission: '',
+  location: '',
+  additionalInfo: '',
+  consentGiven: false,
+  website: '',
+}
+
+function optionalValue(value: string | undefined) {
+  const trimmed = value?.trim()
+  return trimmed ? trimmed : undefined
+}
+
+function numericValue(value: string) {
+  return Number(value.replace(/[\s,]/g, ''))
+}
+
+function genericResponseMessage(status: number) {
+  if (status === 429)
+    return 'ცოტა ხანში კიდევ სცადე. ამ ნომრიდან ბევრი მოთხოვნა დაფიქსირდა.'
+  if (status === 413) return 'ფოტოების ზომა დასაშვებ ზღვარს აჭარბებს.'
+  return 'განაცხადის გაგზავნა დროებით ვერ მოხერხდა. ინფორმაცია შენახულია — გთხოვ, ხელახლა სცადო.'
+}
+
+async function parseSuccessfulResponse<T>(response: Response): Promise<T> {
+  if (!response.ok) {
+    if (response.status === 503) {
+      try {
+        const payload = (await response.json()) as {
+          code?: unknown
+          error?: unknown
+        }
+        if (
+          payload.code === 'CONFIGURATION_ERROR' &&
+          typeof payload.error === 'string'
+        ) {
+          throw new SubmissionError(payload.error)
+        }
+      } catch (error) {
+        if (error instanceof SubmissionError) throw error
+      }
+    }
+
+    throw new SubmissionError(genericResponseMessage(response.status))
+  }
+  try {
+    return (await response.json()) as T
+  } catch {
+    return {} as T
+  }
+}
+
+function isValidInitResponse(value: InitResponse, photoCount: number) {
+  return (
+    typeof value.submissionId === 'string' &&
+    typeof value.publicReference === 'string' &&
+    /^v1:[a-f0-9]{64}$/.test(value.completionToken) &&
+    Array.isArray(value.uploads) &&
+    value.uploads.length === photoCount &&
+    value.uploads.every(
+      (upload) =>
+        Number.isInteger(upload.fileIndex) &&
+        upload.fileIndex >= 0 &&
+        upload.fileIndex < photoCount &&
+        typeof upload.path === 'string' &&
+        typeof upload.token === 'string',
+    ) &&
+    new Set(value.uploads.map((upload) => upload.fileIndex)).size === photoCount
+  )
+}
+
+export function SubmissionForm({ whatsappNumber }: SubmissionFormProps) {
+  const [photos, setPhotos] = useState<SelectedPhoto[]>([])
+  const [phase, setPhase] = useState<SubmissionPhase>('idle')
+  const [photoError, setPhotoError] = useState<string | null>(null)
+  const [submissionError, setSubmissionError] = useState<string | null>(null)
+  const [completedUploads, setCompletedUploads] = useState(0)
+  const [successDetails, setSuccessDetails] = useState<SuccessDetails | null>(
+    null,
+  )
+  const attemptKeyRef = useRef<string | null>(null)
+  const uploadAttemptRef = useRef<UploadAttempt | null>(null)
+  const submittingLockRef = useRef(false)
+  const formStartedRef = useRef(false)
+  const photosRef = useRef<SelectedPhoto[]>([])
+
+  const {
+    register,
+    handleSubmit,
+    formState: { errors },
+  } = useForm<PublicSubmissionFormValues>({
+    resolver: zodResolver(publicSubmissionFormSchema),
+    defaultValues,
+    mode: 'onBlur',
+  })
+
+  const isBusy =
+    phase === 'preparing' ||
+    phase === 'initializing' ||
+    phase === 'uploading' ||
+    phase === 'completing'
+  const uploadProgress = photos.length
+    ? Math.round((completedUploads / photos.length) * 100)
+    : 0
+
+  useEffect(() => {
+    photosRef.current = photos
+  }, [photos])
+
+  useEffect(() => {
+    return () => {
+      photosRef.current.forEach((photo) => {
+        if (photo.previewUrl) URL.revokeObjectURL(photo.previewUrl)
+      })
+    }
+  }, [])
+
+  function markFormStarted() {
+    if (formStartedRef.current) return
+    formStartedRef.current = true
+    trackMetaFormStarted()
+    trackInternalEvent('form_started', { metadata: { source: 'landing_form' } })
+  }
+
+  function invalidateRecoverableAttempt() {
+    if (phase !== 'error') return
+    attemptKeyRef.current = null
+    uploadAttemptRef.current = null
+    setCompletedUploads(0)
+    setSubmissionError(null)
+    setPhase('idle')
+    setPhotos((current) =>
+      current.map((photo) => ({
+        ...photo,
+        status: 'ready',
+        progress: 0,
+        error: undefined,
+      })),
+    )
+  }
+
+  async function addPhotos(incomingFiles: File[]) {
+    if (isBusy) return
+    markFormStarted()
+    invalidateRecoverableAttempt()
+    setPhotoError(null)
+
+    const existingFingerprints = new Set(
+      photos.map((photo) => createPhotoFingerprint(photo.file)),
+    )
+    const batchFingerprints = new Set<string>()
+    const uniqueRawFiles = incomingFiles.filter((file) => {
+      const fingerprint = createPhotoFingerprint(file)
+      if (
+        existingFingerprints.has(fingerprint) ||
+        batchFingerprints.has(fingerprint)
+      )
+        return false
+      batchFingerprints.add(fingerprint)
+      return true
+    })
+
+    if (!uniqueRawFiles.length) {
+      setPhotoError('არჩეული ფოტოები უკვე დამატებულია.')
+      return
+    }
+    if (photos.length + uniqueRawFiles.length > MAX_PHOTO_COUNT) {
+      setPhotoError(`შეგიძლია ატვირთო მაქსიმუმ ${MAX_PHOTO_COUNT} ფოტო.`)
+      return
+    }
+
+    const rawError = validateRawPhotos(uniqueRawFiles)
+    if (rawError) {
+      setPhotoError(rawError)
+      return
+    }
+
+    setPhase('preparing')
+    try {
+      const preparedFiles = await Promise.all(
+        uniqueRawFiles.map((file) => preparePhoto(withReliableMimeType(file))),
+      )
+      const preparedError = validatePreparedPhotos(
+        preparedFiles,
+        photos.map((photo) => photo.file),
+      )
+      if (preparedError) {
+        setPhotoError(preparedError)
+        return
+      }
+
+      const selectedPhotos = preparedFiles.map<SelectedPhoto>((file) => ({
+        id: crypto.randomUUID(),
+        file,
+        previewUrl: canPreviewPhoto(file) ? URL.createObjectURL(file) : null,
+        status: 'ready',
+        progress: 0,
+      }))
+      setPhotos((current) => [...current, ...selectedPhotos])
+      trackInternalEvent('photo_added', {
+        metadata: {
+          addedCount: selectedPhotos.length,
+          totalCount: photos.length + selectedPhotos.length,
+        },
+      })
+    } finally {
+      setPhase('idle')
+    }
+  }
+
+  function removePhoto(photoId: string) {
+    if (isBusy) return
+    invalidateRecoverableAttempt()
+    setPhotos((current) => {
+      const photo = current.find((item) => item.id === photoId)
+      if (photo?.previewUrl) URL.revokeObjectURL(photo.previewUrl)
+      return current.filter((item) => item.id !== photoId)
+    })
+    setPhotoError(null)
+  }
+
+  function updatePhotoStatus(
+    index: number,
+    status: SelectedPhoto['status'],
+    progress: number,
+    error?: string,
+  ) {
+    setPhotos((current) =>
+      current.map((photo, photoIndex) =>
+        photoIndex === index ? { ...photo, status, progress, error } : photo,
+      ),
+    )
+  }
+
+  function createInitPayload(
+    values: PublicSubmissionFormValues,
+  ): SubmissionInitInput {
+    const phone = normalizeGeorgianPhone(values.phone)
+    if (!phone)
+      throw new SubmissionError('შეიყვანე მოქმედი ქართული მობილურის ნომერი.')
+
+    return {
+      phone,
+      customerName: optionalValue(values.customerName),
+      vehicleModel: values.vehicleModel.trim(),
+      vehicleYear: Number(values.vehicleYear),
+      price: numericValue(values.price),
+      mileage: values.mileage?.trim()
+        ? numericValue(values.mileage)
+        : undefined,
+      engine: optionalValue(values.engine),
+      transmission: optionalValue(values.transmission),
+      location: optionalValue(values.location),
+      additionalInfo: optionalValue(values.additionalInfo),
+      consentGiven: true,
+      website: values.website ?? '',
+      files: photos.map((photo, index) => ({
+        originalFilename: photo.file.name,
+        mimeType: photo.file.type as AllowedImageMimeType,
+        fileSize: photo.file.size,
+        sortOrder: index,
+      })),
+    }
+  }
+
+  async function initializeSubmission(values: PublicSubmissionFormValues) {
+    const idempotencyKey = attemptKeyRef.current ?? crypto.randomUUID()
+    attemptKeyRef.current = idempotencyKey
+    setPhase('initializing')
+
+    const response = await fetch('/api/submissions/init', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Idempotency-Key': idempotencyKey,
+      },
+      body: JSON.stringify(createInitPayload(values)),
+    })
+    const init = await parseSuccessfulResponse<InitResponse>(response)
+    if (!isValidInitResponse(init, photos.length)) {
+      throw new SubmissionError(
+        'ატვირთვის სესიის დაწყება ვერ მოხერხდა. გთხოვ, ხელახლა სცადო.',
+      )
+    }
+
+    const attempt: UploadAttempt = { init, uploadedIndexes: new Set() }
+    uploadAttemptRef.current = attempt
+    return attempt
+  }
+
+  async function uploadPhotos(attempt: UploadAttempt) {
+    setPhase('uploading')
+    const supabase = createBrowserSupabaseClient()
+    const orderedUploads = [...attempt.init.uploads].sort(
+      (a, b) => a.fileIndex - b.fileIndex,
+    )
+    const ambiguousFailures: number[] = []
+
+    for (const upload of orderedUploads) {
+      if (attempt.uploadedIndexes.has(upload.fileIndex)) continue
+      const selectedPhoto = photos[upload.fileIndex]
+      if (!selectedPhoto)
+        throw new SubmissionError(
+          'ფოტოების სია შეიცვალა. გთხოვ, თავიდან სცადო.',
+        )
+
+      updatePhotoStatus(upload.fileIndex, 'uploading', 12)
+      const { error } = await supabase.storage
+        .from(SUBMISSION_BUCKET)
+        .uploadToSignedUrl(upload.path, upload.token, selectedPhoto.file, {
+          contentType: selectedPhoto.file.type,
+          cacheControl: '3600',
+        })
+
+      if (error) {
+        updatePhotoStatus(
+          upload.fileIndex,
+          'error',
+          100,
+          'ატვირთვა ვერ დასრულდა',
+        )
+        ambiguousFailures.push(upload.fileIndex)
+        continue
+      }
+
+      attempt.uploadedIndexes.add(upload.fileIndex)
+      updatePhotoStatus(upload.fileIndex, 'uploaded', 100)
+      setCompletedUploads(attempt.uploadedIndexes.size)
+    }
+
+    if (!ambiguousFailures.length) return false
+
+    // A mobile connection can lose the Storage response after the object was
+    // committed. Let the server verify every immutable path before treating it
+    // as a real partial failure; this also makes a retry recover from 409s.
+    try {
+      await completeSubmission(attempt)
+      attempt.init.uploads.forEach((upload) =>
+        updatePhotoStatus(upload.fileIndex, 'uploaded', 100),
+      )
+      attempt.init.uploads.forEach((upload) =>
+        attempt.uploadedIndexes.add(upload.fileIndex),
+      )
+      setCompletedUploads(attempt.init.uploads.length)
+      return true
+    } catch {
+      throw new SubmissionError(
+        `${ambiguousFailures[0] + 1}-ე ფოტო ვერ აიტვირთა. უკვე ატვირთული ფოტოები შენახულია — სცადე ხელახლა.`,
+      )
+    }
+  }
+
+  async function completeSubmission(attempt: UploadAttempt) {
+    setPhase('completing')
+    const payload: SubmissionCompleteInput = {
+      submissionId: attempt.init.submissionId,
+      completionToken: attempt.init.completionToken,
+      uploaded: [...attempt.init.uploads]
+        .sort((a, b) => a.fileIndex - b.fileIndex)
+        .map(({ fileIndex, path }) => ({ fileIndex, path })),
+    }
+    const response = await fetch('/api/submissions/complete', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    })
+    await parseSuccessfulResponse<Record<string, unknown>>(response)
+  }
+
+  async function submit(values: PublicSubmissionFormValues) {
+    if (submittingLockRef.current || isBusy) return
+    markFormStarted()
+
+    if (photos.length < MIN_PHOTO_COUNT || photos.length > MAX_PHOTO_COUNT) {
+      setPhotoError(
+        photos.length < MIN_PHOTO_COUNT
+          ? `Preview-სთვის საჭიროა მინიმუმ ${MIN_PHOTO_COUNT} ფოტო.`
+          : `შეგიძლია ატვირთო მაქსიმუმ ${MAX_PHOTO_COUNT} ფოტო.`,
+      )
+      document.getElementById('vehicle-photos')?.focus()
+      return
+    }
+
+    submittingLockRef.current = true
+    setSubmissionError(null)
+    setPhotoError(null)
+
+    try {
+      const attempt =
+        uploadAttemptRef.current ?? (await initializeSubmission(values))
+      const completedDuringUploadRecovery = await uploadPhotos(attempt)
+      if (!completedDuringUploadRecovery) await completeSubmission(attempt)
+
+      const details: SuccessDetails = {
+        publicReference: attempt.init.publicReference,
+        vehicleModel: values.vehicleModel.trim(),
+        photoCount: photos.length,
+      }
+      trackMetaLeadOnce(details.publicReference)
+      setSuccessDetails(details)
+      setPhase('success')
+      attemptKeyRef.current = null
+      uploadAttemptRef.current = null
+      photos.forEach((photo) => {
+        if (photo.previewUrl) URL.revokeObjectURL(photo.previewUrl)
+      })
+      setPhotos([])
+    } catch (error) {
+      setPhase('error')
+      setSubmissionError(
+        error instanceof SubmissionError
+          ? error.message
+          : 'ატვირთვა დროებით ვერ დასრულდა. ინფორმაცია შენახულია — გთხოვ, ხელახლა სცადო.',
+      )
+    } finally {
+      submittingLockRef.current = false
+    }
+  }
+
+  function handleMeaningfulInput(event: FormEvent<HTMLFormElement>) {
+    const target = event.target as
+      HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement
+    if (target.name && target.name !== 'website') markFormStarted()
+  }
+
+  if (phase === 'success' && successDetails) {
+    return (
+      <SubmissionSuccess {...successDetails} whatsappNumber={whatsappNumber} />
+    )
+  }
+
+  return (
+    <form
+      noValidate
+      aria-busy={isBusy}
+      onInputCapture={handleMeaningfulInput}
+      onChangeCapture={invalidateRecoverableAttempt}
+      onSubmit={(event) => {
+        void handleSubmit(submit, () => {
+          setSubmissionError('შეამოწმე მონიშნული ველები და ხელახლა სცადე.')
+        })(event)
+      }}
+      className="form-card"
+    >
+      <div className="border-graphite/12 flex items-start justify-between gap-5 border-b pb-6">
+        <div className="min-w-0">
+          <p className="text-graphite/65 text-[10px] font-extrabold tracking-[0.18em] uppercase">
+            უფასო · ბარათის გარეშე
+          </p>
+          <h2 className="font-display text-graphite mt-2 text-3xl leading-tight font-bold tracking-[-0.05em] [overflow-wrap:anywhere] sm:text-4xl">
+            გამოგვიგზავნე მანქანა
+          </h2>
+        </div>
+        <span className="bg-graphite text-amber grid size-11 shrink-0 place-items-center rounded-full">
+          <Send aria-hidden="true" className="size-5" />
+        </span>
+      </div>
+
+      <fieldset
+        disabled={isBusy}
+        className="mt-7 space-y-5 disabled:opacity-75"
+      >
+        <div className="grid gap-5 sm:grid-cols-2">
+          <div>
+            <label htmlFor="phone" className="form-label">
+              ტელეფონი ან WhatsApp <span aria-hidden="true">*</span>
+            </label>
+            <input
+              id="phone"
+              type="tel"
+              inputMode="tel"
+              autoComplete="tel"
+              placeholder="+995 5XX XX XX XX"
+              className="form-input"
+              aria-invalid={Boolean(errors.phone)}
+              aria-describedby={errors.phone ? 'phone-error' : undefined}
+              {...register('phone')}
+            />
+            {errors.phone ? (
+              <p id="phone-error" role="alert" className="form-error">
+                <AlertCircle aria-hidden="true" className="size-4 shrink-0" />{' '}
+                {errors.phone.message}
+              </p>
+            ) : null}
+          </div>
+          <div>
+            <label htmlFor="customerName" className="form-label">
+              სახელი{' '}
+              <span className="text-graphite/65 font-normal">
+                (არასავალდებულო)
+              </span>
+            </label>
+            <input
+              id="customerName"
+              type="text"
+              autoComplete="name"
+              placeholder="მაგ. ნიკა"
+              className="form-input"
+              aria-invalid={Boolean(errors.customerName)}
+              aria-describedby={
+                errors.customerName ? 'customer-name-error' : undefined
+              }
+              {...register('customerName')}
+            />
+            {errors.customerName ? (
+              <p id="customer-name-error" role="alert" className="form-error">
+                {errors.customerName.message}
+              </p>
+            ) : null}
+          </div>
+        </div>
+
+        <div>
+          <label htmlFor="vehicleModel" className="form-label">
+            ავტომობილის მარკა და მოდელი <span aria-hidden="true">*</span>
+          </label>
+          <input
+            id="vehicleModel"
+            type="text"
+            placeholder="მაგ. Toyota Camry / Mercedes C200"
+            className="form-input"
+            aria-invalid={Boolean(errors.vehicleModel)}
+            aria-describedby={
+              errors.vehicleModel ? 'vehicle-model-error' : undefined
+            }
+            {...register('vehicleModel')}
+          />
+          {errors.vehicleModel ? (
+            <p id="vehicle-model-error" role="alert" className="form-error">
+              <AlertCircle aria-hidden="true" className="size-4 shrink-0" />{' '}
+              {errors.vehicleModel.message}
+            </p>
+          ) : null}
+        </div>
+
+        <div className="grid grid-cols-2 gap-3 sm:gap-5">
+          <div>
+            <label htmlFor="vehicleYear" className="form-label">
+              გამოშვების წელი <span aria-hidden="true">*</span>
+            </label>
+            <input
+              id="vehicleYear"
+              type="text"
+              inputMode="numeric"
+              placeholder="2021"
+              maxLength={4}
+              className="form-input"
+              aria-invalid={Boolean(errors.vehicleYear)}
+              aria-describedby={
+                errors.vehicleYear ? 'vehicle-year-error' : undefined
+              }
+              {...register('vehicleYear')}
+            />
+            {errors.vehicleYear ? (
+              <p id="vehicle-year-error" role="alert" className="form-error">
+                {errors.vehicleYear.message}
+              </p>
+            ) : null}
+          </div>
+          <div>
+            <label htmlFor="price" className="form-label">
+              ფასი <span aria-hidden="true">*</span>
+            </label>
+            <input
+              id="price"
+              type="text"
+              inputMode="decimal"
+              placeholder="24 900"
+              className="form-input"
+              aria-invalid={Boolean(errors.price)}
+              aria-describedby={errors.price ? 'price-error' : undefined}
+              {...register('price')}
+            />
+            {errors.price ? (
+              <p id="price-error" role="alert" className="form-error">
+                {errors.price.message}
+              </p>
+            ) : null}
+          </div>
+        </div>
+
+        <details className="optional-fields border-graphite/12 border-y py-1">
+          <summary className="text-graphite flex min-h-12 cursor-pointer list-none items-center justify-between gap-4 text-sm font-bold marker:hidden">
+            დამატებითი ინფორმაცია
+            <span className="border-graphite/15 text-graphite/65 rounded-full border px-2.5 py-1 text-[9px] font-bold tracking-[0.12em] uppercase">
+              არასავალდებულო
+            </span>
+          </summary>
+          <div className="grid gap-5 pt-3 pb-5 sm:grid-cols-2">
+            <div>
+              <label htmlFor="mileage" className="form-label">
+                გარბენი
+              </label>
+              <input
+                id="mileage"
+                type="text"
+                inputMode="numeric"
+                placeholder="85 000"
+                className="form-input"
+                aria-invalid={Boolean(errors.mileage)}
+                aria-describedby={errors.mileage ? 'mileage-error' : undefined}
+                {...register('mileage')}
+              />
+              {errors.mileage ? (
+                <p id="mileage-error" role="alert" className="form-error">
+                  {errors.mileage.message}
+                </p>
+              ) : null}
+            </div>
+            <div>
+              <label htmlFor="engine" className="form-label">
+                ძრავი
+              </label>
+              <input
+                id="engine"
+                type="text"
+                placeholder="2.0 Turbo"
+                className="form-input"
+                aria-invalid={Boolean(errors.engine)}
+                aria-describedby={errors.engine ? 'engine-error' : undefined}
+                {...register('engine')}
+              />
+              {errors.engine ? (
+                <p id="engine-error" role="alert" className="form-error">
+                  {errors.engine.message}
+                </p>
+              ) : null}
+            </div>
+            <div>
+              <label htmlFor="transmission" className="form-label">
+                ტრანსმისია
+              </label>
+              <select
+                id="transmission"
+                className="form-input appearance-none"
+                {...register('transmission')}
+              >
+                <option value="">აირჩიე</option>
+                <option value="ავტომატიკა">ავტომატიკა</option>
+                <option value="მექანიკა">მექანიკა</option>
+                <option value="ვარიატორი">ვარიატორი</option>
+                <option value="რობოტი">რობოტი</option>
+              </select>
+            </div>
+            <div>
+              <label htmlFor="location" className="form-label">
+                მდებარეობა
+              </label>
+              <input
+                id="location"
+                type="text"
+                placeholder="მაგ. თბილისი"
+                className="form-input"
+                aria-invalid={Boolean(errors.location)}
+                aria-describedby={
+                  errors.location ? 'location-error' : undefined
+                }
+                {...register('location')}
+              />
+              {errors.location ? (
+                <p id="location-error" role="alert" className="form-error">
+                  {errors.location.message}
+                </p>
+              ) : null}
+            </div>
+            <div className="sm:col-span-2">
+              <label htmlFor="additionalInfo" className="form-label">
+                დამატებითი ინფორმაცია
+              </label>
+              <textarea
+                id="additionalInfo"
+                rows={4}
+                placeholder="კომპლექტაცია, მდგომარეობა ან სხვა მნიშვნელოვანი დეტალი"
+                className="form-input min-h-28 resize-y py-3"
+                aria-invalid={Boolean(errors.additionalInfo)}
+                aria-describedby={
+                  errors.additionalInfo ? 'additional-info-error' : undefined
+                }
+                {...register('additionalInfo')}
+              />
+              {errors.additionalInfo ? (
+                <p
+                  id="additional-info-error"
+                  role="alert"
+                  className="form-error"
+                >
+                  {errors.additionalInfo.message}
+                </p>
+              ) : null}
+            </div>
+          </div>
+        </details>
+
+        <PhotoDropzone
+          photos={photos}
+          error={photoError}
+          disabled={isBusy}
+          preparing={phase === 'preparing'}
+          onFilesSelected={(files) => void addPhotos(files)}
+          onRemove={removePhoto}
+        />
+
+        <div className="sr-only" aria-hidden="true">
+          <label htmlFor="website">ვებსაიტი</label>
+          <input
+            id="website"
+            type="text"
+            tabIndex={-1}
+            autoComplete="off"
+            {...register('website')}
+          />
+        </div>
+
+        <div>
+          <label htmlFor="consentGiven" className="consent-row">
+            <input
+              id="consentGiven"
+              type="checkbox"
+              className="peer sr-only"
+              aria-invalid={Boolean(errors.consentGiven)}
+              aria-describedby={
+                errors.consentGiven ? 'consent-given-error' : undefined
+              }
+              {...register('consentGiven')}
+            />
+            <span className="consent-check" aria-hidden="true">
+              <Check
+                className="size-3 opacity-0 peer-checked:opacity-100"
+                strokeWidth={3}
+              />
+            </span>
+            <span>
+              ვეთანხმები, რომ ატვირთული მასალა გამოყენებული იქნება მხოლოდ ჩემი
+              Preview-ს მოსამზადებლად და საჯაროდ არ გამოქვეყნდება ჩემი თანხმობის
+              გარეშე.
+            </span>
+          </label>
+          {errors.consentGiven ? (
+            <p
+              id="consent-given-error"
+              role="alert"
+              className="form-error mt-2"
+            >
+              {errors.consentGiven.message}
+            </p>
+          ) : null}
+        </div>
+      </fieldset>
+
+      {isBusy ? (
+        <div className="mt-6" aria-live="polite">
+          <div className="text-graphite/65 mb-2 flex items-center justify-between gap-3 text-xs font-semibold">
+            <span>
+              {phase === 'preparing'
+                ? 'ფოტოები მზადდება…'
+                : phase === 'initializing'
+                  ? 'უსაფრთხო ატვირთვა იწყება…'
+                  : phase === 'completing'
+                    ? 'განაცხადი სრულდება…'
+                    : `იტვირთება ${completedUploads} / ${photos.length}`}
+            </span>
+            <span className="font-mono">
+              {phase === 'uploading' ? `${uploadProgress}%` : ''}
+            </span>
+          </div>
+          <div className="bg-graphite/10 h-2 overflow-hidden rounded-full">
+            <div
+              className={`bg-amber h-full transition-[width] duration-500 ${phase !== 'uploading' ? 'animate-pulse' : ''}`}
+              style={{
+                width:
+                  phase === 'initializing'
+                    ? '8%'
+                    : phase === 'completing'
+                      ? '100%'
+                      : `${uploadProgress}%`,
+              }}
+            />
+          </div>
+        </div>
+      ) : null}
+
+      {submissionError ? (
+        <div
+          role="alert"
+          className="mt-6 flex items-start gap-3 border border-[#a8322f]/35 bg-[#a8322f]/8 p-4 text-sm leading-6 text-[#7e211f]"
+        >
+          <AlertCircle aria-hidden="true" className="mt-0.5 size-5 shrink-0" />
+          <div>
+            <p className="font-bold">ატვირთვა ვერ დასრულდა</p>
+            <p className="mt-1">{submissionError}</p>
+          </div>
+        </div>
+      ) : null}
+
+      <button
+        type="submit"
+        disabled={isBusy}
+        className="form-submit group mt-6"
+      >
+        <span>მიიღე უფასო Preview</span>
+        {isBusy ? (
+          <LoaderCircle aria-hidden="true" className="size-5 animate-spin" />
+        ) : (
+          <Send
+            aria-hidden="true"
+            className="size-4 transition-transform group-hover:translate-x-0.5"
+          />
+        )}
+      </button>
+      <p className="text-graphite/65 mt-3 flex items-center justify-center gap-2 text-center text-[11px] leading-5">
+        <LockKeyhole aria-hidden="true" className="size-3.5" /> ფოტოები დაცულად
+        იტვირთება და საჯაროდ არ ჩანს.
+      </p>
+    </form>
+  )
+}
