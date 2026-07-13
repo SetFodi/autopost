@@ -65,6 +65,9 @@ async function renderAndStoreReelStep(
   })
 
   try {
+    // The Sandbox filesystem API does not create missing parent directories.
+    // Remotion uploads nested bundle folders first, so seed its root explicitly.
+    await sandbox.mkDir('remotion-bundle')
     await addBundleToSandbox({
       sandbox,
       bundleDir: join(process.cwd(), '.remotion'),
@@ -138,11 +141,9 @@ async function renderAndStoreReelStep(
     })
     return true
   } finally {
-    // Sandbox instances are persistent by default. Delete the entire instance
-    // so every render is ephemeral and does not leave billable snapshots.
-    await sandbox.delete().catch(async () => {
-      await sandbox.stop().catch(() => undefined)
-    })
+    // Remotion's supported Sandbox SDK creates disposable instances. Always
+    // stop the VM so a completed or failed render cannot keep consuming time.
+    await sandbox.stop().catch(() => undefined)
   }
 }
 
