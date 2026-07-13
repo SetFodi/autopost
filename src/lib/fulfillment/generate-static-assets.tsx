@@ -9,13 +9,14 @@ import sharp from 'sharp'
 
 import { createMarketingCopy } from '@/lib/fulfillment/copy'
 import { GENERATED_BUCKET } from '@/lib/fulfillment/config'
+import { createContainedPhotoLayers } from '@/lib/fulfillment/media-framing'
 import type {
   AssetAccessTier,
   CreativeSubmission,
   GeneratedAssetKind,
 } from '@/lib/fulfillment/types'
 import { getServiceSupabaseClient } from '@/lib/supabase/admin'
-import { SUBMISSION_BUCKET } from '@/lib/validation/submission'
+import { MIN_PHOTO_COUNT, SUBMISSION_BUCKET } from '@/lib/validation/submission'
 
 const FONT_GEORGIAN = join(
   process.cwd(),
@@ -58,13 +59,8 @@ function priceLabel(submission: CreativeSubmission) {
   return `${new Intl.NumberFormat('en-US', { maximumFractionDigits: 2 }).format(submission.price)} ${submission.price_currency}`
 }
 
-async function photoDataUri(photo: Buffer, width: number, height: number) {
-  const prepared = await sharp(photo, { failOn: 'error' })
-    .rotate()
-    .resize(width, height, { fit: 'cover', position: 'attention' })
-    .jpeg({ quality: 88, progressive: true })
-    .toBuffer()
-  return `data:image/jpeg;base64,${prepared.toString('base64')}`
+function dataUri(buffer: Buffer, mimeType: 'image/jpeg' | 'image/png') {
+  return `data:${mimeType};base64,${buffer.toString('base64')}`
 }
 
 async function renderCard({
@@ -75,10 +71,12 @@ async function renderCard({
   watermarked,
   eyebrow,
 }: CardOptions) {
-  const [image, fonts] = await Promise.all([
-    photoDataUri(photo, width, height),
+  const [photoLayers, fonts] = await Promise.all([
+    createContainedPhotoLayers(photo, width, height),
     getFonts(),
   ])
+  const backgroundImage = dataUri(photoLayers.background, 'image/jpeg')
+  const foregroundImage = dataUri(photoLayers.foreground, 'image/png')
   const inset = Math.round(width * 0.055)
   const titleSize = Math.round(width * (height > width ? 0.07 : 0.064))
 
@@ -98,7 +96,7 @@ async function renderCard({
       {/* eslint-disable-next-line @next/next/no-img-element */}
       <img
         alt=""
-        src={image}
+        src={backgroundImage}
         width={width}
         height={height}
         style={{ position: 'absolute', inset: 0, objectFit: 'cover' }}
@@ -108,8 +106,24 @@ async function renderCard({
           display: 'flex',
           position: 'absolute',
           inset: 0,
+          backgroundColor: 'rgba(12,11,10,.2)',
+        }}
+      />
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img
+        alt=""
+        src={foregroundImage}
+        width={width}
+        height={height}
+        style={{ position: 'absolute', inset: 0, objectFit: 'contain' }}
+      />
+      <div
+        style={{
+          display: 'flex',
+          position: 'absolute',
+          inset: 0,
           backgroundImage:
-            'linear-gradient(180deg, rgba(12,11,10,.18) 20%, rgba(12,11,10,.02) 45%, rgba(12,11,10,.94) 100%)',
+            'linear-gradient(180deg, rgba(12,11,10,.16) 18%, rgba(12,11,10,.03) 46%, rgba(12,11,10,.96) 100%)',
         }}
       />
       <div
@@ -264,7 +278,7 @@ async function loadCreativeInput(submissionId: string) {
     submissionResult.error ||
     filesResult.error ||
     !submissionResult.data ||
-    filesResult.data.length < 5
+    filesResult.data.length < MIN_PHOTO_COUNT
   ) {
     throw new Error('creative_input_unavailable')
   }
@@ -327,15 +341,15 @@ export async function generateStaticAssetSet(
     await loadCreativeInput(submissionId)
   const watermarked = accessTier === 'preview'
   const storyAssets = await Promise.all(
-    ([1, 2, 3] as const).map(
-      async (photoIndex, index): Promise<GeneratedBuffer> => ({
+    Array.from({ length: 3 }, (_, index) => index).map(
+      async (index): Promise<GeneratedBuffer> => ({
         kind: `story_${index + 1}` as GeneratedAssetKind,
         filename: `${submission.public_reference}-story-${index + 1}.png`,
         mimeType: 'image/png',
         buffer: await renderCard({
           width: 1080,
           height: 1920,
-          photo: photos[photoIndex]!,
+          photo: photos[(index + 1) % photos.length]!,
           submission,
           watermarked,
           eyebrow: `STORY / 0${index + 1}`,

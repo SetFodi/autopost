@@ -93,6 +93,53 @@ function BrandFrame({ label }: { label: string }) {
   )
 }
 
+function ContainedPhoto({
+  photo,
+  progress = 0,
+  direction = 1,
+  bottomInset,
+}: {
+  photo: string
+  progress?: number
+  direction?: 1 | -1
+  bottomInset: number
+}) {
+  const topInset = 76
+  const sideInset = 42
+
+  return (
+    <AbsoluteFill style={{ overflow: 'hidden' }}>
+      <Img
+        src={photo}
+        style={{
+          width: '100%',
+          height: '100%',
+          objectFit: 'cover',
+          filter: 'blur(38px) brightness(.5) saturate(.72)',
+          opacity: 0.9,
+          scale: 1.16,
+          translate: `${direction * progress * 12}px 0`,
+        }}
+      />
+      <AbsoluteFill style={{ backgroundColor: 'rgba(12,11,10,.2)' }} />
+      <Img
+        src={photo}
+        style={{
+          position: 'absolute',
+          top: topInset,
+          left: sideInset,
+          width: `calc(100% - ${sideInset * 2}px)`,
+          height: `calc(100% - ${topInset + bottomInset}px)`,
+          objectFit: 'contain',
+          filter: 'drop-shadow(0 28px 50px rgba(0,0,0,.48))',
+          scale: 0.985 + progress * 0.015,
+          translate: `${direction * progress * 8}px 0`,
+        }}
+      />
+    </AbsoluteFill>
+  )
+}
+
 function PhotoScene({
   photo,
   label,
@@ -116,15 +163,11 @@ function PhotoScene({
 
   return (
     <AbsoluteFill style={{ backgroundColor: BRAND.graphite }}>
-      <Img
-        src={photo}
-        style={{
-          width: '100%',
-          height: '100%',
-          objectFit: 'cover',
-          scale: 1.02 + progress * 0.08,
-          translate: `${index % 2 === 0 ? -progress * 22 : progress * 22}px 0`,
-        }}
+      <ContainedPhoto
+        photo={photo}
+        progress={progress}
+        direction={index % 2 === 0 ? -1 : 1}
+        bottomInset={210}
       />
       <AbsoluteFill
         style={{
@@ -172,15 +215,7 @@ function IntroScene({
 
   return (
     <AbsoluteFill style={{ backgroundColor: BRAND.graphite }}>
-      <Img
-        src={photo}
-        style={{
-          width: '100%',
-          height: '100%',
-          objectFit: 'cover',
-          scale: 1.05,
-        }}
-      />
+      <ContainedPhoto photo={photo} bottomInset={350} />
       <AbsoluteFill
         style={{
           background:

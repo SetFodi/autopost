@@ -73,30 +73,48 @@ export async function getResultSnapshot(
   const visibleRows = (assetsResult.data ?? []).filter(
     (asset) => asset.access_tier === 'preview' || paid,
   )
-  const signedAssets = await Promise.all(
-    visibleRows.map(async (asset): Promise<ResultAsset | null> => {
+  const copyRow =
+    visibleRows.find(
+      (asset) => asset.access_tier === 'paid' && asset.asset_kind === 'copy',
+    ) ??
+    visibleRows.find(
+      (asset) => asset.access_tier === 'preview' && asset.asset_kind === 'copy',
+    )
+
+  const [signedAssets, copyText] = await Promise.all([
+    Promise.all(
+      visibleRows.map(async (asset): Promise<ResultAsset | null> => {
+        const { data, error } = await service.storage
+          .from(GENERATED_BUCKET)
+          .createSignedUrl(
+            asset.storage_path,
+            RESULT_ASSET_URL_TTL_SECONDS,
+            asset.mime_type === 'application/zip' ||
+              asset.mime_type.startsWith('text/')
+              ? { download: asset.filename }
+              : undefined,
+          )
+        if (error || !data?.signedUrl) return null
+        return Object.assign(
+          {
+            filename: asset.filename,
+            kind: asset.asset_kind,
+            mimeType: asset.mime_type,
+            url: data.signedUrl,
+          },
+          { accessTier: asset.access_tier },
+        )
+      }),
+    ),
+    (async () => {
+      if (!copyRow) return null
       const { data, error } = await service.storage
         .from(GENERATED_BUCKET)
-        .createSignedUrl(
-          asset.storage_path,
-          RESULT_ASSET_URL_TTL_SECONDS,
-          asset.mime_type === 'application/zip' ||
-            asset.mime_type.startsWith('text/')
-            ? { download: asset.filename }
-            : undefined,
-        )
-      if (error || !data?.signedUrl) return null
-      return Object.assign(
-        {
-          filename: asset.filename,
-          kind: asset.asset_kind,
-          mimeType: asset.mime_type,
-          url: data.signedUrl,
-        },
-        { accessTier: asset.access_tier },
-      )
-    }),
-  )
+        .download(copyRow.storage_path, {}, { cache: 'no-store' })
+      if (error || !data) return null
+      return data.text()
+    })(),
+  ])
 
   const assets = signedAssets
     .filter(
@@ -118,6 +136,7 @@ export async function getResultSnapshot(
         (asset) =>
           asset.access_tier === 'preview' && asset.asset_kind === 'reel',
       ),
+    copyText,
     paid,
     paidAssets: paid
       ? assets.filter((asset) => asset.accessTier === 'paid')

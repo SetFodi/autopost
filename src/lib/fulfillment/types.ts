@@ -45,6 +45,7 @@ export type ResultAsset = {
 }
 
 export type ResultSnapshot = {
+  copyText: string | null
   publicReference: string
   vehicleModel: string
   vehicleYear: number
