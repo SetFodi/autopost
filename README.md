@@ -1,6 +1,6 @@
 # AutoPost
 
-AutoPost for Cars is an automated validation product for Georgian vehicle sellers. A seller uploads 5–15 real car photos and minimal vehicle details; durable workflows create a watermarked Reel, 3 Stories, a 6-slide carousel, a square card, and trilingual copy. The private result page appears immediately, updates while processing, and unlocks the clean package after a verified **14.90₾** TBC Checkout payment.
+AutoPost for Cars is an automated validation product for Georgian vehicle sellers. A seller uploads 3–15 real car photos and minimal vehicle details; durable workflows create a watermarked Reel, 3 Stories, a 6-slide carousel, a square card, and trilingual copy. The private result page appears immediately, updates while processing, and unlocks the clean package after a verified **14.90₾** TBC Checkout payment.
 
 The product is intentionally optimized around one demand signal: a completed submission containing real vehicle photos. The strongest signal is a recorded payment.
 
@@ -17,7 +17,7 @@ Included:
 - Georgian mobile-first landing page and exact, consistent Preview CTA
 - replaceable before/after hero media with polished local fallbacks
 - short vehicle form with Georgian phone normalization
-- 5–15 image selection, preview, removal, progress, retry, and duplicate-click protection
+- 3–15 image selection, preview, removal, progress, retry, and duplicate-click protection
 - local orientation-preserving photo re-encoding that strips EXIF/GPS before upload
 - short-lived direct upload tokens for the private Supabase bucket
 - server verification of every expected object, declared MIME, file signature, structure, and safe dimensions before completion
