@@ -1,17 +1,5 @@
-'use client'
-
-import { useEffect } from 'react'
-
-import { trackInternalEvent } from '@/lib/analytics/client'
-import { initializeMetaPixel } from '@/lib/analytics/meta-pixel'
+import { MarketingPageAnalytics } from '@/components/marketing/marketing-page-analytics'
 
 export function LandingAnalytics() {
-  useEffect(() => {
-    initializeMetaPixel()
-    trackInternalEvent('landing_view', {
-      metadata: { path: '/' },
-    })
-  }, [])
-
-  return null
+  return <MarketingPageAnalytics path="/" />
 }

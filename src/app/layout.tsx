@@ -19,15 +19,39 @@ const mono = IBM_Plex_Mono({
 
 const title = 'AutoPost — მანქანის პროფესიონალური რეკლამა ფოტოებიდან'
 const description =
-  'ატვირთე მანქანის ფოტოები და მიიღე პროფესიონალური Reel, Story, carousel და გაყიდვის ტექსტი სამ ენაზე. პირველი Preview უფასოა.'
+  'ატვირთე 3–15 მანქანის ფოტო და მიიღე პროფესიონალური Reel, Story, carousel, პოსტი და გაყიდვის ტექსტი სამ ენაზე. პირველი Preview უფასოა.'
+
+const googleVerification =
+  process.env.NEXT_PUBLIC_GOOGLE_SITE_VERIFICATION?.trim()
 
 export const metadata: Metadata = {
   metadataBase: getSiteUrl(),
   title,
   description,
   applicationName: 'AutoPost',
+  creator: 'AutoPost',
+  publisher: 'AutoPost',
   category: 'automotive',
+  keywords: [
+    'მანქანის გაყიდვა',
+    'მანქანის რეკლამა',
+    'მანქანის განცხადება',
+    'ავტომობილის ფოტოები',
+    'AutoPost',
+  ],
   alternates: { canonical: '/' },
+  robots: {
+    index: true,
+    follow: true,
+    googleBot: {
+      index: true,
+      follow: true,
+      'max-image-preview': 'large',
+      'max-snippet': -1,
+      'max-video-preview': -1,
+    },
+  },
+  verification: googleVerification ? { google: googleVerification } : undefined,
   openGraph: {
     type: 'website',
     locale: 'ka_GE',

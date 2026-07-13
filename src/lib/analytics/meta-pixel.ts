@@ -52,7 +52,7 @@ function loadPixelScript() {
   document.head.appendChild(script)
 }
 
-/** Installs Meta's queue, initializes the configured Pixel, and records PageView. */
+/** Installs Meta's queue and initializes the configured Pixel once. */
 export function initializeMetaPixel(): boolean {
   const pixelId = getPixelId()
   if (!pixelId || typeof window === 'undefined') return false
@@ -62,7 +62,6 @@ export function initializeMetaPixel(): boolean {
   const fbq = installPixelQueue()
   loadPixelScript()
   fbq('init', pixelId)
-  fbq('track', 'PageView')
   window.__autoPostMetaPixelId = pixelId
   return true
 }
@@ -70,6 +69,14 @@ export function initializeMetaPixel(): boolean {
 function getInitializedPixel(): MetaPixelFunction | null {
   if (!initializeMetaPixel()) return null
   return window.fbq ?? null
+}
+
+/** Records a PageView for every public client-side navigation. */
+export function trackMetaPageView(): boolean {
+  const fbq = getInitializedPixel()
+  if (!fbq) return false
+  fbq('track', 'PageView')
+  return true
 }
 
 export function trackMetaFormStarted(): boolean {

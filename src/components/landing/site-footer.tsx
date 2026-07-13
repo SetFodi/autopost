@@ -36,7 +36,29 @@ export function SiteFooter() {
             ) : null}
           </div>
 
-          <div className="grid gap-8 sm:grid-cols-2 lg:justify-self-end">
+          <div className="grid gap-8 sm:grid-cols-3 lg:justify-self-end">
+            <div>
+              <p className="text-ivory/40 text-xs font-bold tracking-[0.16em] uppercase">
+                AutoPost
+              </p>
+              <nav
+                aria-label="AutoPost-ის გვერდები"
+                className="text-ivory/58 mt-4 flex flex-col items-start gap-3 text-sm"
+              >
+                <Link className="nav-link" href="/examples">
+                  მაგალითები
+                </Link>
+                <Link className="nav-link" href="/how-it-works">
+                  როგორ მუშაობს
+                </Link>
+                <Link className="nav-link" href="/pricing">
+                  ფასი
+                </Link>
+                <Link className="nav-link" href="/faq">
+                  კითხვები
+                </Link>
+              </nav>
+            </div>
             <div>
               <p className="text-ivory/40 text-xs font-bold tracking-[0.16em] uppercase">
                 ინფორმაცია
@@ -50,6 +72,12 @@ export function SiteFooter() {
                 </Link>
                 <Link className="nav-link" href="/terms">
                   წესები და პირობები
+                </Link>
+                <Link className="nav-link" href="/about">
+                  ჩვენს შესახებ
+                </Link>
+                <Link className="nav-link" href="/guides">
+                  გზამკვლევები
                 </Link>
               </nav>
             </div>

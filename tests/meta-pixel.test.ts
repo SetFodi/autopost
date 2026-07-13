@@ -4,6 +4,7 @@ import {
   initializeMetaPixel,
   trackMetaFormStarted,
   trackMetaLeadOnce,
+  trackMetaPageView,
 } from '@/lib/analytics/meta-pixel'
 
 describe('Meta Pixel utility', () => {
@@ -20,14 +21,19 @@ describe('Meta Pixel utility', () => {
     delete process.env.NEXT_PUBLIC_META_PIXEL_ID
   })
 
-  it('initializes PageView only once', () => {
+  it('initializes the Pixel once and records every requested PageView', () => {
     expect(initializeMetaPixel()).toBe(true)
     expect(initializeMetaPixel()).toBe(true)
+    expect(trackMetaPageView()).toBe(true)
+    expect(trackMetaPageView()).toBe(true)
 
     const pageViews = window.fbq?.queue.filter(
       (call) => call[0] === 'track' && call[1] === 'PageView',
     )
-    expect(pageViews).toHaveLength(1)
+    expect(pageViews).toHaveLength(2)
+    expect(window.fbq?.queue.filter((call) => call[0] === 'init')).toHaveLength(
+      1,
+    )
     expect(document.querySelectorAll('#autopost-meta-pixel')).toHaveLength(1)
   })
 
@@ -49,6 +55,7 @@ describe('Meta Pixel utility', () => {
   it('is inert when no Pixel ID is configured', () => {
     delete process.env.NEXT_PUBLIC_META_PIXEL_ID
     expect(initializeMetaPixel()).toBe(false)
+    expect(trackMetaPageView()).toBe(false)
     expect(trackMetaLeadOnce('AP-NO-PIXEL')).toBe(false)
     expect(window.fbq).toBeUndefined()
   })

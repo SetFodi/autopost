@@ -7,7 +7,7 @@ export function SiteHeader() {
     <header className="sticky top-0 z-50 border-b border-white/[0.07] bg-[#0c0b0a]/85 backdrop-blur-xl">
       <div className="site-container flex h-[68px] items-center justify-between gap-3 md:h-[72px]">
         <Link
-          href="/#top"
+          href="/"
           className="group flex min-w-0 items-center gap-2.5 focus-visible:outline-none"
           aria-label="AutoPost — მთავარი გვერდი"
         >
@@ -21,14 +21,17 @@ export function SiteHeader() {
           aria-label="მთავარი ნავიგაცია"
           className="text-ivory/55 hidden items-center gap-8 text-[13px] font-medium lg:flex"
         >
-          <Link className="nav-link" href="/#how-it-works">
+          <Link className="nav-link" href="/examples">
+            მაგალითები
+          </Link>
+          <Link className="nav-link" href="/how-it-works">
             როგორ მუშაობს
           </Link>
-          <Link className="nav-link" href="/#deliverables">
-            რას მიიღებ
+          <Link className="nav-link" href="/pricing">
+            ფასი
           </Link>
-          <Link className="nav-link" href="/#pricing">
-            უფასო Preview
+          <Link className="nav-link" href="/guides">
+            გზამკვლევები
           </Link>
         </nav>
 
