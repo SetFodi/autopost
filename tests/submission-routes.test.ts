@@ -3,8 +3,12 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 const serviceMocks = vi.hoisted(() => ({
   getServiceSupabaseClient: vi.fn(),
 }))
+const workflowMocks = vi.hoisted(() => ({
+  start: vi.fn(),
+}))
 
 vi.mock('@/lib/supabase/admin', () => serviceMocks)
+vi.mock('workflow/api', () => workflowMocks)
 
 import { POST as completeSubmission } from '@/app/api/submissions/complete/route'
 import { POST as initializeSubmission } from '@/app/api/submissions/init/route'
@@ -225,22 +229,49 @@ function completeService(
     data: { signedUrl: `https://storage.example.test/${path}?token=signed` },
     error: null,
   }))
-  const rpc = vi.fn().mockResolvedValue({
-    data: [
-      {
-        already_complete: false,
-        completed_at: new Date().toISOString(),
-        photo_count: rows.length,
-        public_reference: PUBLIC_REFERENCE,
-        vehicle_model: 'BMW 330i',
-      },
-    ],
-    error: null,
+  const rpc = vi.fn(async (name: string) => {
+    if (name === 'complete_submission') {
+      return {
+        data: [
+          {
+            already_complete: false,
+            completed_at: new Date().toISOString(),
+            photo_count: rows.length,
+            public_reference: PUBLIC_REFERENCE,
+            vehicle_model: 'BMW 330i',
+          },
+        ],
+        error: null,
+      }
+    }
+    if (name === 'queue_fulfillment') {
+      return {
+        data: [
+          {
+            fulfillment_status: 'generating_preview',
+            preview_start_token:
+              'starting:123e4567-e89b-42d3-a456-426614174001',
+            should_start_preview: true,
+          },
+        ],
+        error: null,
+      }
+    }
+    throw new Error(`Unexpected RPC: ${name}`)
   })
+  const fulfillmentQuery = {
+    update: vi.fn().mockReturnThis(),
+    eq: vi.fn().mockReturnThis(),
+    is: vi.fn().mockResolvedValue({ data: null, error: null }),
+  }
 
   return {
     from: vi.fn((table: string) =>
-      table === 'submissions' ? submissionQuery : filesQuery,
+      table === 'submissions'
+        ? submissionQuery
+        : table === 'fulfillments'
+          ? fulfillmentQuery
+          : filesQuery,
     ),
     storage: { from: vi.fn(() => ({ info, createSignedUrl })) },
     rpc,
@@ -267,6 +298,8 @@ describe('POST /api/submissions/init', () => {
     delete process.env.SUBMISSION_INIT_REQUEST_RATE_LIMIT_MAX
     delete process.env.SUBMISSION_RATE_LIMIT_WINDOW_MINUTES
     serviceMocks.getServiceSupabaseClient.mockReset()
+    workflowMocks.start.mockReset()
+    workflowMocks.start.mockResolvedValue({ runId: 'wrun_test' })
   })
 
   it('creates an idempotent pending intake and signed upload targets', async () => {
@@ -336,8 +369,9 @@ describe('POST /api/submissions/init', () => {
       }),
     )
 
-    expect(response.status).toBe(429)
+    expect(response.status).toBe(503)
     expect(response.headers.get('Retry-After')).toBe('86400')
+    expect((await response.json()).code).toBe('INTAKE_CAPACITY_EXCEEDED')
     expect(service.createSignedUploadUrl).not.toHaveBeenCalled()
   })
 
@@ -374,6 +408,8 @@ describe('POST /api/submissions/complete', () => {
   beforeEach(() => {
     process.env.RATE_LIMIT_IP_HASH_SECRET = 'x'.repeat(32)
     serviceMocks.getServiceSupabaseClient.mockReset()
+    workflowMocks.start.mockReset()
+    workflowMocks.start.mockResolvedValue({ runId: 'wrun_test' })
     streamCancelMocks = []
     mockStorageFetch()
   })
@@ -407,6 +443,8 @@ describe('POST /api/submissions/complete', () => {
       submissionId: SUBMISSION_ID,
       publicReference: PUBLIC_REFERENCE,
       photoCount: 5,
+      generationStatus: 'generating_preview',
+      resultUrl: expect.stringContaining('/result/'),
     })
     expect(service.info).toHaveBeenCalledTimes(5)
     expect(service.createSignedUrl).toHaveBeenCalledTimes(5)
@@ -426,6 +464,7 @@ describe('POST /api/submissions/complete', () => {
       'complete_submission',
       expect.objectContaining({ p_submission_id: SUBMISSION_ID }),
     )
+    expect(workflowMocks.start).toHaveBeenCalledTimes(1)
   })
 
   it('keeps the intake incomplete when one stored object does not match', async () => {
@@ -464,6 +503,8 @@ describe('POST /api/submissions/complete', () => {
 
     expect(response.status).toBe(200)
     expect(service.info).not.toHaveBeenCalled()
-    expect(service.rpc).not.toHaveBeenCalled()
+    expect(service.rpc).toHaveBeenCalledWith('queue_fulfillment', {
+      p_submission_id: SUBMISSION_ID,
+    })
   })
 })

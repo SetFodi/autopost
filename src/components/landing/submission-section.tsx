@@ -4,7 +4,7 @@ import { SubmissionForm } from '@/components/forms/submission-form'
 
 const assurances = [
   { icon: WalletCards, text: 'ბარათი და წინასწარი გადახდა არ გჭირდება' },
-  { icon: Clock3, text: 'წყლის ნიშნით დაცული Preview — 24 საათში' },
+  { icon: Clock3, text: 'წყლის ნიშნით დაცული Preview — ავტომატურად' },
   { icon: ShieldCheck, text: 'ფოტოები საჯაროდ არ ქვეყნდება თანხმობის გარეშე' },
 ] as const
 
@@ -28,8 +28,8 @@ export function SubmissionSection() {
             შენი მანქანა უკვე მზადაა უკეთესი პირველი შთაბეჭდილებისთვის.
           </h2>
           <p className="text-ivory/52 mt-5 max-w-md text-base leading-8">
-            შეავსე მოკლე ფორმა და ატვირთე რეალური ფოტოები. ჩვენი გუნდი ხელით
-            მოამზადებს პირველ წყლის ნიშნიან Preview-ს.
+            შეავსე მოკლე ფორმა და ატვირთე რეალური ფოტოები. AutoPost ავტომატურად
+            მოამზადებს პირველ წყლის ნიშნიან Preview-ს და პირად შედეგის გვერდს.
           </p>
 
           <ul className="mt-8 divide-y divide-white/[0.07] border-y border-white/[0.07]">

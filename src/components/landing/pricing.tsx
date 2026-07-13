@@ -5,8 +5,8 @@ import { TrackedCta } from '@/components/landing/tracked-cta'
 const previewItems = [
   'წყლის ნიშნით დაცული',
   'Reel-ისა და დიზაინების წინასწარი ნახვა',
-  'მიწოდება WhatsApp-ზე',
-  'მზადდება მაქსიმუმ 24 საათში',
+  'პირადი შედეგის გვერდი',
+  'ავტომატური დამუშავება',
   'ბარათი არ არის საჭირო',
 ] as const
 
@@ -49,7 +49,7 @@ export function Pricing() {
                   </h3>
                 </div>
                 <span className="plate-chip border-graphite/20 text-graphite/60">
-                  24 სთ
+                  AUTO
                 </span>
               </div>
 
@@ -113,8 +113,8 @@ export function Pricing() {
             </ul>
 
             <p className="text-ivory/45 mt-8 border border-white/10 bg-white/[0.03] px-4 py-3 text-xs leading-6">
-              ონლაინ გადახდა ამ ვერსიაში არ არის. დეტალებს მხოლოდ Preview-ს
-              მოწონების შემდეგ მიიღებ.
+              Preview-ს მოწონების შემდეგ გადაიხდი უსაფრთხო TBC Checkout-ით და
+              სუფთა ფაილები ავტომატურად გაიხსნება პირად გვერდზე.
             </p>
           </article>
         </div>

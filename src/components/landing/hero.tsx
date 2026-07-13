@@ -5,7 +5,7 @@ import { TrackedCta } from '@/components/landing/tracked-cta'
 
 const trustItems = [
   { icon: Check, text: 'პირველი Preview უფასოა' },
-  { icon: Clock3, text: 'მიწოდება 24 საათში' },
+  { icon: Clock3, text: 'Preview ავტომატურად მზადდება' },
   { icon: Sparkles, text: 'ბარათი არ გჭირდება' },
 ] as const
 

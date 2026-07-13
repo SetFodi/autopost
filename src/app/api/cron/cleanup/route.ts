@@ -15,6 +15,7 @@ const CLEANUP_BATCH_SIZE = 100
 const CLEANUP_CONCURRENCY = 10
 const STALE_SUBMISSION_MS = 24 * 60 * 60 * 1000
 const RATE_EVENT_RETENTION_MS = 7 * 24 * 60 * 60 * 1000
+const TOMBSTONE_BATCH_SIZE = 100
 
 const NO_STORE_HEADERS = {
   'Cache-Control': 'private, no-store',
@@ -147,7 +148,61 @@ export async function GET(request: Request) {
     })
   }
 
-  const ok = failedSubmissionIds.length === 0 && !rateCleanupError
+  const { data: tombstones, error: tombstoneClaimError } = await service.rpc(
+    'claim_due_deletion_tombstones',
+    { p_batch_size: TOMBSTONE_BATCH_SIZE },
+  )
+  let clearedTombstones = 0
+  const failedTombstoneIds: string[] = []
+
+  if (tombstoneClaimError) {
+    console.error('[cron/cleanup] tombstone claim failed', {
+      code: tombstoneClaimError.code,
+    })
+  } else {
+    for (const tombstone of tombstones ?? []) {
+      const prefix = tombstone.storage_prefix.replace(/\/$/, '')
+      const { data: recreated, error: listError } = await service.storage
+        .from(SUBMISSION_BUCKET)
+        .list(prefix, { limit: 100 })
+      if (listError) {
+        failedTombstoneIds.push(tombstone.submission_id)
+        continue
+      }
+
+      const recreatedPaths = (recreated ?? [])
+        .filter((item) => item.id)
+        .map((item) => `${prefix}/${item.name}`)
+      if (recreatedPaths.length > 0) {
+        const { error: removeError } = await service.storage
+          .from(SUBMISSION_BUCKET)
+          .remove(recreatedPaths)
+        if (removeError) {
+          failedTombstoneIds.push(tombstone.submission_id)
+          continue
+        }
+      }
+
+      const { data: deleted, error: deleteError } = await service.rpc(
+        'delete_claimed_deletion_tombstone',
+        {
+          p_claim_token: tombstone.claim_token,
+          p_submission_id: tombstone.submission_id,
+        },
+      )
+      if (deleteError || !deleted) {
+        failedTombstoneIds.push(tombstone.submission_id)
+      } else {
+        clearedTombstones += 1
+      }
+    }
+  }
+
+  const ok =
+    failedSubmissionIds.length === 0 &&
+    failedTombstoneIds.length === 0 &&
+    !rateCleanupError &&
+    !tombstoneClaimError
   return NextResponse.json(
     {
       ok,
@@ -155,6 +210,9 @@ export async function GET(request: Request) {
       deletedSubmissions,
       failedSubmissionIds,
       deletedRateEvents: deletedRateEvents ?? 0,
+      claimedTombstones: tombstones?.length ?? 0,
+      clearedTombstones,
+      failedTombstoneIds,
     },
     {
       status: ok ? 200 : 500,

@@ -1,5 +1,7 @@
 import { NextResponse } from 'next/server'
+import { start } from 'workflow/api'
 
+import { getResultUrl } from '@/lib/fulfillment/result-token'
 import { readLimitedJson } from '@/lib/security/json'
 import {
   SecurityConfigurationError,
@@ -22,6 +24,7 @@ import type {
   ApiErrorResponse,
   SubmissionCompleteResponse,
 } from '@/types/submission'
+import { previewFulfillmentWorkflow } from '@/workflows/fulfillment'
 
 export const runtime = 'nodejs'
 
@@ -32,6 +35,44 @@ const NO_STORE_HEADERS = {
 
 const SIGNED_DOWNLOAD_TTL_SECONDS = 30
 const STORAGE_READ_TIMEOUT_MS = 8_000
+
+async function ensureAutomationStarted(
+  submissionId: string,
+  service: ReturnType<typeof getServiceSupabaseClient>,
+) {
+  const { data: queueRows, error: queueError } = await service.rpc(
+    'queue_fulfillment',
+    { p_submission_id: submissionId },
+  )
+  const queued = queueRows?.[0]
+  if (queueError || !queued) throw new Error('fulfillment_queue_failed')
+
+  if (queued.should_start_preview && queued.preview_start_token) {
+    try {
+      const run = await start(previewFulfillmentWorkflow, [submissionId])
+      const { error: runError } = await service
+        .from('fulfillments')
+        .update({ preview_workflow_run_id: run.runId })
+        .eq('submission_id', submissionId)
+        .eq('preview_workflow_run_id', queued.preview_start_token)
+      if (runError) throw new Error('fulfillment_run_record_failed')
+    } catch (error) {
+      await service
+        .from('fulfillments')
+        .update({
+          failed_at: new Date().toISOString(),
+          last_error_code: 'workflow_start_failed',
+          preview_workflow_run_id: null,
+          status: 'failed',
+        })
+        .eq('submission_id', submissionId)
+        .eq('preview_workflow_run_id', queued.preview_start_token)
+      throw error
+    }
+  }
+
+  return queued.fulfillment_status
+}
 
 function errorResponse(
   code: ApiErrorCode,
@@ -165,12 +206,22 @@ export async function POST(request: Request) {
     }
 
     if (submission.upload_state === 'complete') {
+      const generationStatus = await ensureAutomationStarted(
+        submission.id,
+        service,
+      )
       const response: SubmissionCompleteResponse = {
         submissionId: submission.id,
         publicReference: submission.public_reference,
         vehicleModel: submission.vehicle_model,
         photoCount: files.length,
-        expectedDelivery: '24 საათი',
+        resultUrl: getResultUrl(submission.id).toString(),
+        generationStatus:
+          generationStatus === 'ready'
+            ? 'ready'
+            : generationStatus === 'preview_ready'
+              ? 'preview_ready'
+              : 'generating_preview',
       }
       return NextResponse.json(response, { headers: NO_STORE_HEADERS })
     }
@@ -244,12 +295,22 @@ export async function POST(request: Request) {
     }
 
     const completed = completedRows[0]
+    const generationStatus = await ensureAutomationStarted(
+      submission.id,
+      service,
+    )
     const response: SubmissionCompleteResponse = {
       submissionId: submission.id,
       publicReference: completed.public_reference,
       vehicleModel: completed.vehicle_model,
       photoCount: completed.photo_count,
-      expectedDelivery: '24 საათი',
+      resultUrl: getResultUrl(submission.id).toString(),
+      generationStatus:
+        generationStatus === 'ready'
+          ? 'ready'
+          : generationStatus === 'preview_ready'
+            ? 'preview_ready'
+            : 'generating_preview',
     }
 
     return NextResponse.json(response, { headers: NO_STORE_HEADERS })

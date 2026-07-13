@@ -29,7 +29,8 @@ export type SubmissionCompleteResponse = {
   publicReference: string
   vehicleModel: string
   photoCount: number
-  expectedDelivery: '24 საათი'
+  resultUrl: string
+  generationStatus: 'generating_preview' | 'preview_ready' | 'ready'
 }
 
 export type ApiErrorCode =
@@ -37,6 +38,7 @@ export type ApiErrorCode =
   | 'INVALID_REQUEST'
   | 'IDEMPOTENCY_REQUIRED'
   | 'IDEMPOTENCY_CONFLICT'
+  | 'INTAKE_CAPACITY_EXCEEDED'
   | 'RATE_LIMITED'
   | 'UPLOAD_INCOMPLETE'
   | 'SERVICE_UNAVAILABLE'

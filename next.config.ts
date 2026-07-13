@@ -1,4 +1,5 @@
 import type { NextConfig } from 'next'
+import { withWorkflow } from 'workflow/next'
 
 const securityHeaders = [
   { key: 'X-Content-Type-Options', value: 'nosniff' },
@@ -19,6 +20,13 @@ if (process.env.NODE_ENV === 'production') {
 
 const nextConfig: NextConfig = {
   poweredByHeader: false,
+  serverExternalPackages: ['@remotion/lambda', 'archiver'],
+  outputFileTracingIncludes: {
+    '/*': [
+      './node_modules/@fontsource/noto-sans-georgian/files/noto-sans-georgian-georgian-700-normal.woff',
+      './node_modules/@fontsource/noto-sans-georgian/files/noto-sans-georgian-latin-700-normal.woff',
+    ],
+  },
   images: {
     // Next 16 coerces any <Image quality> to the closest allowed value
     // (default [75]) — allowlist the qualities the landing actually uses.
@@ -34,4 +42,4 @@ const nextConfig: NextConfig = {
   },
 }
 
-export default nextConfig
+export default withWorkflow(nextConfig)
