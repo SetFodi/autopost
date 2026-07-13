@@ -1,108 +1,240 @@
 'use client'
 
-import { useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 
 import Image from 'next/image'
-import { MoveHorizontal } from 'lucide-react'
+import { Maximize2, MoveHorizontal, X } from 'lucide-react'
 
 import { demoAssets } from '@/lib/demo-assets'
 
-const INITIAL_POSITION = 48
+const INITIAL_POSITION = 54
 const { heroBefore, heroAfter } = demoAssets
 
-/**
- * Real before/after of the same model family.
- * Labels always come from demoAssets — never invent a model name here.
- */
-export function BeforeAfterSlider() {
-  const [position, setPosition] = useState(INITIAL_POSITION)
+type ComparisonStageProps = {
+  eager?: boolean
+  position: number
+  onChange: (position: number) => void
+  onInteract: () => void
+}
 
+function ComparisonStage({
+  eager = false,
+  position,
+  onChange,
+  onInteract,
+}: ComparisonStageProps) {
   return (
-    <figure className="m-0">
-      <div
-        className="ba-frame aspect-[16/10] sm:aspect-[16/9] lg:aspect-[2.1/1]"
-        style={{ '--ba-pos': position } as React.CSSProperties}
-      >
-        {/* After — polished creative */}
-        <div className="ba-layer">
-          <Image
-            src={heroAfter.src}
-            alt={heroAfter.alt}
-            fill
-            priority
-            fetchPriority="high"
-            quality={92}
-            sizes="(max-width: 1024px) 94vw, 1100px"
-            className={`object-cover ${heroAfter.objectPosition}`}
-          />
-          <span className="ad-watermark" aria-hidden="true">
-            AUTOPOST · PREVIEW
-          </span>
+    <div
+      className="ba-frame aspect-[3/2]"
+      style={{ '--ba-pos': position } as React.CSSProperties}
+    >
+      <div className="ba-layer">
+        <Image
+          src={heroAfter.src}
+          alt={heroAfter.alt}
+          fill
+          loading={eager ? 'eager' : 'lazy'}
+          fetchPriority={eager ? 'high' : 'auto'}
+          quality={90}
+          sizes={eager ? '(max-width: 1024px) 94vw, 690px' : '94vw'}
+          className={`object-cover ${heroAfter.objectPosition}`}
+        />
+        <span className="ad-watermark" aria-hidden="true">
+          AUTOPOST · PREVIEW
+        </span>
 
-          <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/90 via-black/45 to-transparent pt-16 pb-3 sm:pb-4">
-            <div className="flex flex-col items-end gap-1.5 px-3 sm:px-5">
-              <p className="bg-amber text-graphite px-2.5 py-1 font-mono text-sm font-semibold tracking-[-0.01em] sm:px-3 sm:text-base">
-                {heroAfter.price}
+        <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/90 via-black/35 to-transparent pt-16 pb-3 sm:pb-4">
+          <div className="flex flex-col items-end gap-1.5 px-3 sm:px-5">
+            <p className="bg-amber text-graphite px-2.5 py-1 font-mono text-sm font-semibold tracking-[-0.01em] sm:px-3 sm:text-base">
+              {heroAfter.price}
+            </p>
+            <div className="max-w-[min(100%,20rem)] text-right">
+              <p className="text-ivory text-sm font-extrabold tracking-[-0.02em] drop-shadow sm:text-base">
+                {heroAfter.model}
               </p>
-              <div className="max-w-[min(100%,18rem)] text-right">
-                <p className="text-ivory text-sm font-extrabold tracking-[-0.02em] drop-shadow sm:text-base">
-                  {heroAfter.model}
-                </p>
-                <p className="text-ivory/75 font-mono text-[10px] tracking-[0.06em] drop-shadow sm:text-[11px]">
-                  {heroAfter.specs}
-                </p>
-              </div>
+              <p className="text-ivory/75 font-mono text-[9px] tracking-[0.035em] drop-shadow sm:text-[11px]">
+                {heroAfter.specs}
+              </p>
             </div>
           </div>
-
-          <span className="media-label absolute top-3 right-3 sm:top-4 sm:right-4">
-            <span
-              className="bg-amber live-dot size-1.5 rounded-full"
-              aria-hidden="true"
-            />
-            AUTOPOST
-          </span>
         </div>
 
-        {/* Before — ordinary photo of the same model family */}
-        <div className="ba-layer ba-before">
-          <Image
-            src={heroBefore.src}
-            alt=""
+        <span className="media-label absolute top-3 right-3 sm:top-4 sm:right-4">
+          <span
+            className="bg-amber live-dot size-1.5 rounded-full"
             aria-hidden="true"
-            fill
-            priority
-            quality={86}
-            sizes="(max-width: 1024px) 94vw, 1100px"
-            className={`object-cover ${heroBefore.objectPosition}`}
           />
-          <span className="media-label absolute top-3 left-3 sm:top-4 sm:left-4">
-            {heroBefore.fileLabel}
-          </span>
-        </div>
-
-        <div className="ba-divider">
-          <span className="ba-grip ba-grip-hint">
-            <MoveHorizontal aria-hidden="true" className="size-5" />
-          </span>
-        </div>
-
-        <input
-          type="range"
-          min={0}
-          max={100}
-          step={1}
-          value={position}
-          onChange={(event) => setPosition(Number(event.target.value))}
-          className="ba-range"
-          aria-label="შედარების ხაზის გადაადგილება — მარცხნივ ჩვეულებრივი ფოტო, მარჯვნივ AutoPost-ის მზა რეკლამა"
-        />
+          მზა კადრი
+        </span>
       </div>
 
-      <figcaption className="text-ivory/45 mt-3 flex items-center justify-between gap-3 font-mono text-[10px] tracking-[0.14em] uppercase sm:text-[11px]">
-        <span>← ჩვეულებრივი ფოტო</span>
-        <span className="text-amber">მზა რეკლამა →</span>
-      </figcaption>
-    </figure>
+      <div className="ba-layer ba-before">
+        <Image
+          src={heroBefore.src}
+          alt={heroBefore.alt}
+          fill
+          loading={eager ? 'eager' : 'lazy'}
+          quality={86}
+          sizes={eager ? '(max-width: 1024px) 94vw, 690px' : '94vw'}
+          className={`object-cover ${heroBefore.objectPosition}`}
+        />
+        <span className="media-label absolute top-3 left-3 sm:top-4 sm:left-4">
+          ჩვეულებრივი ფოტო · {heroBefore.fileLabel}
+        </span>
+      </div>
+
+      <div className="ba-divider">
+        <span className="ba-grip ba-grip-hint">
+          <MoveHorizontal aria-hidden="true" className="size-5" />
+        </span>
+      </div>
+
+      <input
+        type="range"
+        min={0}
+        max={100}
+        step={1}
+        value={position}
+        onPointerDown={onInteract}
+        onKeyDown={onInteract}
+        onChange={(event) => {
+          onInteract()
+          onChange(Number(event.target.value))
+        }}
+        className="ba-range"
+        aria-label="შედარების ხაზის გადაადგილება — მარცხნივ ჩვეულებრივი ფოტო, მარჯვნივ AutoPost-ის მზა რეკლამა"
+      />
+    </div>
+  )
+}
+
+export function BeforeAfterSlider() {
+  const [position, setPosition] = useState(INITIAL_POSITION)
+  const [isAutoPlaying, setIsAutoPlaying] = useState(false)
+  const [isDialogOpen, setIsDialogOpen] = useState(false)
+  const dialogRef = useRef<HTMLDialogElement>(null)
+  const timersRef = useRef<ReturnType<typeof setTimeout>[]>([])
+
+  const stopAutoPlay = useCallback(() => {
+    timersRef.current.forEach(clearTimeout)
+    timersRef.current = []
+    setIsAutoPlaying(false)
+  }, [])
+
+  useEffect(() => {
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return
+
+    timersRef.current = [
+      setTimeout(() => {
+        setIsAutoPlaying(true)
+        setPosition(78)
+      }, 400),
+      setTimeout(() => setPosition(22), 1450),
+      setTimeout(() => setPosition(INITIAL_POSITION), 2650),
+      setTimeout(() => setIsAutoPlaying(false), 3800),
+    ]
+
+    return stopAutoPlay
+  }, [stopAutoPlay])
+
+  function openDialog() {
+    stopAutoPlay()
+    setIsDialogOpen(true)
+    if (!dialogRef.current?.open) dialogRef.current?.showModal()
+  }
+
+  return (
+    <>
+      <figure className={`ba-shell m-0 ${isAutoPlaying ? 'ba-auto' : ''}`}>
+        <div className="ba-toolbar">
+          <div className="flex min-w-0 items-center gap-2.5">
+            <span className="ba-status-dot" aria-hidden="true" />
+            <span className="text-ivory/70 truncate font-mono text-[9px] font-semibold tracking-[0.15em] uppercase sm:text-[10px]">
+              რეალური ფოტო · რეალური შედეგი
+            </span>
+          </div>
+
+          <div
+            className="ba-pipeline hidden items-center gap-2 sm:flex"
+            aria-hidden="true"
+          >
+            <span>RAW</span>
+            <i />
+            <strong>AUTOPOST</strong>
+            <i />
+            <span>READY</span>
+          </div>
+
+          <button
+            type="button"
+            onClick={openDialog}
+            className="ba-expand"
+            aria-label="შედარების დიდ ფანჯარაში გახსნა"
+          >
+            <Maximize2 aria-hidden="true" className="size-3.5" />
+            <span className="hidden sm:inline">გადიდება</span>
+          </button>
+        </div>
+
+        <ComparisonStage
+          eager
+          position={position}
+          onChange={setPosition}
+          onInteract={stopAutoPlay}
+        />
+
+        <figcaption className="ba-caption">
+          <span>← გამყიდველის ფოტო</span>
+          <span className="text-amber">მზა განცხადება →</span>
+        </figcaption>
+      </figure>
+
+      <dialog
+        ref={dialogRef}
+        className="ba-dialog"
+        aria-labelledby="ba-dialog-title"
+        onClose={() => setIsDialogOpen(false)}
+        onClick={(event) => {
+          if (event.target === event.currentTarget) event.currentTarget.close()
+        }}
+      >
+        <div className="ba-dialog-panel">
+          <div className="ba-dialog-head">
+            <div>
+              <p className="text-amber font-mono text-[9px] font-semibold tracking-[0.2em] uppercase">
+                Before / After
+              </p>
+              <h2
+                id="ba-dialog-title"
+                className="text-ivory mt-1 text-base font-bold tracking-[-0.02em] sm:text-lg"
+              >
+                გაასრიალე და შეადარე სრული კადრი
+              </h2>
+            </div>
+            <button
+              type="button"
+              onClick={() => dialogRef.current?.close()}
+              className="ba-dialog-close"
+              aria-label="ფანჯრის დახურვა"
+            >
+              <X aria-hidden="true" className="size-4" />
+            </button>
+          </div>
+
+          {isDialogOpen ? (
+            <ComparisonStage
+              position={position}
+              onChange={setPosition}
+              onInteract={stopAutoPlay}
+            />
+          ) : null}
+
+          <p className="text-ivory/45 mt-3 text-center text-xs leading-5 sm:text-sm">
+            იგივე მანქანა, იგივე რეალური პროპორციები — მხოლოდ უფრო სუფთა და
+            გასაყიდად გამზადებული კადრი.
+          </p>
+        </div>
+      </dialog>
+    </>
   )
 }

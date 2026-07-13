@@ -4,18 +4,18 @@
  */
 export const demoAssets = {
   heroBefore: {
-    src: '/demo/before-mercedes.jpg',
-    alt: 'გამყიდველის ტელეფონით გადაღებული ფოტო — იგივე Mercedes-AMG GT R ეზოში, მკვეთრ შუადღის მზეზე',
-    fileLabel: 'IMG_2417.JPG',
-    objectPosition: 'object-[center_62%]',
+    src: '/demo/hero-before-v2.jpg',
+    alt: 'გამყიდველის ტელეფონით გადაღებული ფოტო — Hyundai Sonata საცხოვრებელი კორპუსის ეზოში',
+    fileLabel: 'IMG_4821.JPG',
+    objectPosition: 'object-center',
   },
   heroAfter: {
-    src: '/demo/after-mercedes.jpg',
-    alt: 'AutoPost-ის მზა სარეკლამო კადრი — Mercedes-AMG GT R',
-    model: 'Mercedes-AMG GT R',
-    specs: '2018 · 28 000 კმ · ბენზინი · თბილისი',
-    price: '$118,500',
-    objectPosition: 'object-[center_55%]',
+    src: '/demo/hero-after-v2.jpg',
+    alt: 'AutoPost-ის მზა სარეკლამო კადრი — იგივე Hyundai Sonata სუფთა, რეალისტურ გარემოში',
+    model: 'Hyundai Sonata',
+    specs: '2020 · 72 000 კმ · 2.4 ბენზინი · თბილისი',
+    price: '38 500 ₾',
+    objectPosition: 'object-center',
   },
 
   sourceToyota: {
@@ -26,45 +26,45 @@ export const demoAssets = {
     objectPosition: 'object-[center_52%]',
   },
   sourceVw: {
-    src: '/demo/before-vw.jpg',
-    alt: 'გამყიდველის ღამის ფოტო — Volkswagen Polo ტროტუართან, ტელეფონის კადრი',
-    fileLabel: 'IMG_2409.JPG',
-    model: 'Volkswagen Polo',
-    objectPosition: 'object-[center_55%]',
+    src: '/demo/source-hatchback-v2.jpg',
+    alt: 'გამყიდველის ტელეფონის ფოტო — ვერცხლისფერი კომპაქტური ჰეტჩბექი კორპუსის სადგომზე',
+    fileLabel: 'IMG_4816.JPG',
+    model: 'Nissan Almera',
+    objectPosition: 'object-center',
   },
 
   /** Format-native frames for deliverables + package output */
   reelAudi: {
-    src: '/demo/format-reel.jpg',
-    alt: 'Reel — Audi RS6 Avant, 9:16',
-    model: 'Audi RS6 Avant',
+    src: '/demo/format-reel-v2.jpg',
+    alt: 'Reel — ლურჯი Kia Sportage რეალისტურ საქალაქო ფონზე, 9:16',
+    model: 'Kia Sportage',
     format: 'REEL · 9:16',
-    objectPosition: 'object-[center_55%]',
+    objectPosition: 'object-center',
     /** Native preview frame in the UI — height must be definite so the aspect ratio can resolve a width. */
-    frameClass: 'aspect-[9/14] h-[19rem] sm:h-[22rem] mx-auto',
+    frameClass: 'aspect-[2/3] h-[19rem] sm:h-[22rem] mx-auto',
   },
   storyTesla: {
-    src: '/demo/format-story.jpg',
-    alt: 'Story — Tesla Model 3, 4:5',
-    model: 'Tesla Model 3',
+    src: '/demo/format-story-v2.jpg',
+    alt: 'Story — თეთრი Toyota Corolla ბუნებრივ საცხოვრებელ გარემოში, 4:5',
+    model: 'Toyota Corolla',
     format: 'STORY · 4:5',
-    objectPosition: 'object-[center_80%]',
+    objectPosition: 'object-center',
     frameClass: 'aspect-[4/5] h-[16rem] sm:h-[19rem] mx-auto',
   },
   carouselPorsche: {
-    src: '/demo/format-carousel.jpg',
-    alt: 'Carousel — Porsche Panamera Turbo, 16:10',
-    model: 'Porsche Panamera',
+    src: '/demo/format-carousel-v2.jpg',
+    alt: 'Carousel — ბროწეულისფერი Chevrolet Captiva ჩვეულებრივ საქალაქო გარემოში, 16:10',
+    model: 'Chevrolet Captiva',
     format: 'CAROUSEL · 6 სლაიდი',
-    objectPosition: 'object-[center_48%]',
+    objectPosition: 'object-center',
     frameClass: 'aspect-[16/10] w-full',
   },
   cardMercedes: {
-    src: '/demo/format-card.jpg',
-    alt: 'კვადრატული ბარათი — Mercedes-AMG GT R, 1:1',
-    model: 'Mercedes-AMG GT R',
+    src: '/demo/format-card-v2.jpg',
+    alt: 'კვადრატული ბარათი — ვერცხლისფერი Hyundai Accent რეალისტურ სადგომზე, 1:1',
+    model: 'Hyundai Accent',
     format: '1:1',
-    objectPosition: 'object-[center_52%]',
+    objectPosition: 'object-center',
     frameClass: 'aspect-square max-h-[18rem] w-full max-w-[18rem] mx-auto',
   },
 } as const
@@ -72,14 +72,14 @@ export const demoAssets = {
 export const demoSalesCopy = [
   {
     lang: 'KA',
-    text: 'იყიდება Mercedes-AMG GT R — იდეალურ მდგომარეობაში…',
+    text: 'იყიდება Hyundai Sonata — მოვლილი, სუფთა ინტერიერით…',
   },
   {
     lang: 'EN',
-    text: 'Mercedes-AMG GT R for sale — excellent condition…',
+    text: 'Hyundai Sonata for sale — well maintained and ready to drive…',
   },
   {
     lang: 'RU',
-    text: 'Продаётся Mercedes-AMG GT R — отличное состояние…',
+    text: 'Продаётся Hyundai Sonata — ухоженный и готовый к поездкам…',
   },
 ] as const

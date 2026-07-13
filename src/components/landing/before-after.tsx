@@ -46,7 +46,7 @@ export function BeforeAfter() {
               {sourcePhotos.map((photo) => (
                 <div
                   key={photo.src}
-                  className="relative aspect-[16/10] overflow-hidden bg-black/40"
+                  className="relative aspect-[3/2] overflow-hidden bg-black/40"
                 >
                   <Image
                     src={photo.src}

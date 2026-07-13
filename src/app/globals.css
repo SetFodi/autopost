@@ -210,6 +210,109 @@ textarea:disabled {
 }
 
 /* Before/after slider */
+.ba-shell {
+  position: relative;
+  padding: 0.45rem;
+  border: 1px solid rgb(244 238 228 / 13%);
+  background:
+    linear-gradient(135deg, rgb(244 238 228 / 7%), transparent 32%), #0a0908;
+  box-shadow:
+    0 1px 0 rgb(255 255 255 / 7%) inset,
+    0 44px 120px rgb(0 0 0 / 58%);
+}
+
+.ba-shell::before,
+.ba-shell::after {
+  position: absolute;
+  z-index: 5;
+  width: 1.15rem;
+  height: 1.15rem;
+  border-color: var(--amber);
+  pointer-events: none;
+  content: '';
+}
+
+.ba-shell::before {
+  top: -0.3rem;
+  left: -0.3rem;
+  border-top: 1px solid;
+  border-left: 1px solid;
+}
+
+.ba-shell::after {
+  right: -0.3rem;
+  bottom: -0.3rem;
+  border-right: 1px solid;
+  border-bottom: 1px solid;
+}
+
+.ba-toolbar {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 0.75rem;
+  min-height: 2.6rem;
+  padding: 0 0.4rem 0.45rem;
+}
+
+.ba-status-dot {
+  width: 0.45rem;
+  height: 0.45rem;
+  flex: none;
+  border-radius: 999px;
+  background: var(--amber);
+  box-shadow: 0 0 0 4px rgb(232 160 58 / 11%);
+}
+
+.ba-pipeline {
+  color: rgb(244 238 228 / 32%);
+  font-family: var(--font-autopost-mono), var(--font-autopost-sans), monospace;
+  font-size: 0.5rem;
+  letter-spacing: 0.15em;
+}
+
+.ba-pipeline i {
+  width: 1.1rem;
+  height: 1px;
+  background: rgb(244 238 228 / 14%);
+}
+
+.ba-pipeline strong {
+  color: var(--amber);
+  font-weight: 700;
+}
+
+.ba-expand,
+.ba-dialog-close {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid rgb(244 238 228 / 13%);
+  background: rgb(244 238 228 / 4%);
+  color: rgb(244 238 228 / 62%);
+  transition:
+    border-color 160ms ease,
+    background-color 160ms ease,
+    color 160ms ease;
+}
+
+.ba-expand {
+  min-height: 1.9rem;
+  gap: 0.4rem;
+  padding: 0 0.55rem;
+  font-family: var(--font-autopost-mono), var(--font-autopost-sans), monospace;
+  font-size: 0.55rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+}
+
+.ba-expand:hover,
+.ba-dialog-close:hover {
+  border-color: rgb(232 160 58 / 55%);
+  background: rgb(232 160 58 / 10%);
+  color: var(--amber-bright);
+}
+
 .ba-frame {
   position: relative;
   isolation: isolate;
@@ -221,6 +324,21 @@ textarea:disabled {
     0 40px 100px rgb(0 0 0 / 55%);
 }
 
+.ba-frame::after {
+  position: absolute;
+  inset: 0;
+  z-index: 3;
+  border: 1px solid rgb(244 238 228 / 5%);
+  background: linear-gradient(
+    105deg,
+    transparent 42%,
+    rgb(255 255 255 / 3%),
+    transparent 58%
+  );
+  pointer-events: none;
+  content: '';
+}
+
 .ba-layer {
   position: absolute;
   inset: 0;
@@ -229,6 +347,10 @@ textarea:disabled {
 .ba-before {
   z-index: 2;
   clip-path: inset(0 calc(100% - var(--ba-pos) * 1%) 0 0);
+}
+
+.ba-auto .ba-before {
+  transition: clip-path 1.05s cubic-bezier(0.65, 0, 0.22, 1);
 }
 
 /* Light “phone photo” treatment — do not crush image quality */
@@ -247,6 +369,10 @@ textarea:disabled {
   box-shadow: 0 0 28px rgb(232 160 58 / 55%);
   pointer-events: none;
   transform: translateX(-1px);
+}
+
+.ba-auto .ba-divider {
+  transition: left 1.05s cubic-bezier(0.65, 0, 0.22, 1);
 }
 
 .ba-grip {
@@ -295,6 +421,87 @@ textarea:disabled {
 .ba-range:focus-visible {
   outline: 2px solid var(--amber);
   outline-offset: -4px;
+}
+
+.ba-caption {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.6rem 0.4rem 0.15rem;
+  color: rgb(244 238 228 / 40%);
+  font-family: var(--font-autopost-mono), var(--font-autopost-sans), monospace;
+  font-size: 0.55rem;
+  letter-spacing: 0.11em;
+  text-transform: uppercase;
+}
+
+.ba-dialog {
+  width: min(94vw, 76rem);
+  max-width: none;
+  max-height: 94dvh;
+  margin: auto;
+  overflow: visible;
+  border: 0;
+  background: transparent;
+  padding: 0;
+  color: var(--ivory);
+}
+
+.ba-dialog[open] {
+  animation: ba-dialog-in 380ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.ba-dialog::backdrop {
+  background: rgb(3 3 3 / 82%);
+  backdrop-filter: blur(12px);
+}
+
+.ba-dialog[open]::backdrop {
+  animation: ba-backdrop-in 300ms ease both;
+}
+
+.ba-dialog-panel {
+  border: 1px solid rgb(244 238 228 / 16%);
+  background:
+    radial-gradient(circle at 82% 0%, rgb(232 160 58 / 12%), transparent 34%),
+    #0c0b0a;
+  padding: 0.65rem;
+  box-shadow: 0 50px 160px rgb(0 0 0 / 85%);
+}
+
+.ba-dialog-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.25rem 0.15rem 0.7rem 0.35rem;
+}
+
+.ba-dialog-close {
+  width: 2.3rem;
+  height: 2.3rem;
+  flex: none;
+}
+
+@keyframes ba-dialog-in {
+  from {
+    opacity: 0;
+    transform: translateY(18px) scale(0.965);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes ba-backdrop-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
 }
 
 .media-label {
@@ -647,6 +854,14 @@ textarea:disabled {
 @media (min-width: 640px) {
   .site-container {
     width: min(100% - 3rem, 1280px);
+  }
+
+  .ba-toolbar {
+    grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+  }
+
+  .ba-expand {
+    justify-self: end;
   }
 }
 
