@@ -24,30 +24,12 @@ export function getResultTokenSecret() {
   return secret
 }
 
-export function getRemotionConfig() {
-  const region = process.env.REMOTION_AWS_REGION?.trim()
-  const functionName = process.env.REMOTION_FUNCTION_NAME?.trim()
-  const serveUrl = process.env.REMOTION_SERVE_URL?.trim()
-  const missing = [
-    !region && 'REMOTION_AWS_REGION',
-    !functionName && 'REMOTION_FUNCTION_NAME',
-    !serveUrl && 'REMOTION_SERVE_URL',
-  ].filter((value): value is string => Boolean(value))
-
-  if (missing.length > 0) throw new FulfillmentConfigurationError(missing)
-  return { functionName: functionName!, region: region!, serveUrl: serveUrl! }
-}
-
 export function isRemotionConfigured() {
-  try {
-    getRemotionConfig()
-    return Boolean(
-      process.env.AWS_ACCESS_KEY_ID?.trim() &&
-      process.env.AWS_SECRET_ACCESS_KEY?.trim(),
-    )
-  } catch {
-    return false
-  }
+  // Vercel injects OIDC credentials automatically in deployments. Locally,
+  // `vercel env pull` provides VERCEL_OIDC_TOKEN for authenticated renders.
+  return Boolean(
+    process.env.VERCEL?.trim() || process.env.VERCEL_OIDC_TOKEN?.trim(),
+  )
 }
 
 export function getTbcConfig() {

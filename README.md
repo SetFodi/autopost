@@ -29,7 +29,7 @@ Included:
 - Supabase email/password admin authentication
 - admin KPIs, search, filters, responsive submission review, private photo links, status/notes/revenue updates
 - automatic watermarked and clean static asset templates with trilingual copy
-- durable Vercel Workflow orchestration and Remotion Lambda Reel rendering
+- durable Vercel Workflow orchestration and Remotion rendering in Vercel Sandbox
 - signed private customer result pages with expiring asset downloads
 - server-verified TBC Checkout payments and automatic ZIP delivery
 - editable WhatsApp support/delivery tools for exceptional cases
@@ -123,9 +123,6 @@ Copy `.env.example` to `.env.local`.
 | `NEXT_PUBLIC_META_PIXEL_ID`                           | no                           | Enables Meta Pixel; no script or error is produced when absent                |
 | `TBC_API_KEY` / `TBC_CLIENT_ID` / `TBC_CLIENT_SECRET` | required for payments        | TBC E-Commerce merchant credentials                                           |
 | `TBC_API_BASE_URL`                                    | no                           | Defaults to `https://api.tbcbank.ge/v1`                                       |
-| `AWS_ACCESS_KEY_ID` / `AWS_SECRET_ACCESS_KEY`         | required for Reels           | Least-privilege Remotion Lambda IAM credentials                               |
-| `REMOTION_AWS_REGION`                                 | required for Reels           | Supported region; deployment default is `eu-central-1`                        |
-| `REMOTION_FUNCTION_NAME` / `REMOTION_SERVE_URL`       | required for Reels           | Deployed Remotion Lambda function and site identifiers                        |
 
 Generate the IP hashing secret locally:
 
@@ -133,7 +130,7 @@ Generate the IP hashing secret locally:
 openssl rand -hex 32
 ```
 
-Generate `RESULT_TOKEN_SECRET` and `CRON_SECRET` separately with the same command. Do not expose server keys, payment credentials, AWS credentials, or HMAC secrets through a `NEXT_PUBLIC_` name.
+Generate `RESULT_TOKEN_SECRET` and `CRON_SECRET` separately with the same command. Do not expose server keys, payment credentials, or HMAC secrets through a `NEXT_PUBLIC_` name.
 
 ## Supabase project and database setup
 
@@ -258,14 +255,13 @@ Events contain an event name, optional submission ID, and small non-sensitive me
 
 ## Automated fulfillment and payment setup
 
-Static Preview and clean image/copy assets are generated inside the workflow with no per-order operator action. Reel rendering uses Remotion Lambda so long-running video work is not placed inside an ephemeral Vercel function.
+Static Preview and clean image/copy assets are generated inside the workflow with no per-order operator action. Reel rendering uses Remotion in a short-lived Vercel Sandbox. Vercel supplies OIDC authentication automatically, the app uploads the MP4 directly into private Supabase Storage, and the sandbox is deleted after every render. No AWS account or Vercel Blob store is required.
 
-1. Create a least-privilege AWS IAM user for Remotion Lambda and configure its access key locally.
-2. Deploy the Remotion function and site in `eu-central-1` using the official Remotion Lambda setup, then set `REMOTION_FUNCTION_NAME` and `REMOTION_SERVE_URL`.
-3. Obtain the TBC E-Commerce API key and merchant client credentials, register `https://YOUR_DOMAIN/api/payments/tbc/callback` in the merchant dashboard, and set the three TBC secrets in Vercel Production.
-4. Provide the real operator name, address, and support contact required on the public legal pages before requesting TBC live activation.
-5. Submit a new order: its private result page should progress from generating to Preview-ready without admin action.
-6. Complete a TBC test payment and confirm the result page progresses to a downloadable clean ZIP package.
+1. Enable Vercel Sandbox for the project if the dashboard prompts for it, and set a conservative Vercel spend limit before public traffic.
+2. Obtain the TBC E-Commerce API key and merchant client credentials, register `https://YOUR_DOMAIN/api/payments/tbc/callback` in the merchant dashboard, and set the three TBC secrets in Vercel Production.
+3. Provide the real operator name, address, and support contact required on the public legal pages before requesting TBC live activation.
+4. Submit a new order: its private result page should progress from generating to Preview-ready without admin action.
+5. Complete a TBC test payment and confirm the result page progresses to a downloadable clean ZIP package.
 
 Checkout stays disabled unless both TBC and Remotion are configured and the watermarked Reel exists. This prevents accepting money for a package the environment cannot render.
 
@@ -285,10 +281,10 @@ pnpm test          # focused Vitest suite
 pnpm test:db       # pgTAP migration/security tests (local Supabase required)
 pnpm test:coverage # coverage report
 pnpm format:check  # Prettier verification
-pnpm build         # production build
+pnpm build         # bundle the Reel composition and build Next.js
 pnpm start         # run the production build
 pnpm remotion:studio # preview the Reel composition locally
-pnpm remotion:deploy # deploy the Remotion site after Lambda is configured
+pnpm remotion:bundle # rebuild the composition bundle used by Sandbox
 ```
 
 ## Deploy to Vercel
@@ -299,11 +295,11 @@ pnpm remotion:deploy # deploy the Remotion site after Lambda is configured
 4. Do not give arbitrary Preview deployments production Supabase credentials or the production Pixel ID. Either leave backend variables absent (presentation-only previews) or use a separate staging Supabase project, staging admin, distinct secrets, and a staging/test Pixel.
 5. Set the Production `NEXT_PUBLIC_SITE_URL` to the canonical production URL; previews can omit it and use their Vercel deployment origin.
 6. Apply the Supabase migrations before the first live submission.
-7. Configure Remotion Lambda and TBC merchant credentials before enabling checkout.
+7. Confirm Vercel Sandbox renders one real Preview, then configure TBC merchant credentials before enabling checkout.
 8. Deploy, then run the mobile upload, automatic Preview, TBC test payment, clean ZIP delivery, admin login, private-photo, and Pixel test flows.
 9. Add the final domain in Vercel and update DNS, then update the TBC callback/return allow-list if required.
 
-One-time external setup still requires account owners: Supabase access, the first admin, the Meta Pixel ID, AWS/Remotion credentials, TBC merchant activation, the real operator/address, Vercel, and the domain. No per-order manual creation, payment verification, or delivery is required after those credentials are active.
+One-time external setup still requires account owners: Supabase access, the first admin, the Meta Pixel ID, TBC merchant activation, the real operator/address, Vercel, and the domain. No per-order manual creation, payment verification, or delivery is required after those credentials are active.
 
 ## Manual QA checklist
 

@@ -20,12 +20,16 @@ if (process.env.NODE_ENV === 'production') {
 
 const nextConfig: NextConfig = {
   poweredByHeader: false,
-  serverExternalPackages: ['@remotion/lambda', 'archiver'],
+  serverExternalPackages: ['archiver'],
   outputFileTracingIncludes: {
-    '/*': [
+    '/.well-known/workflow/v1/step': [
+      './.remotion/**/*',
       './node_modules/@fontsource/noto-sans-georgian/files/noto-sans-georgian-georgian-700-normal.woff',
       './node_modules/@fontsource/noto-sans-georgian/files/noto-sans-georgian-latin-700-normal.woff',
     ],
+  },
+  outputFileTracingExcludes: {
+    '/.well-known/workflow/v1/step': ['node_modules/.remotion/**/*'],
   },
   images: {
     // Next 16 coerces any <Image quality> to the closest allowed value

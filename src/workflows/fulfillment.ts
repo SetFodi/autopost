@@ -1,9 +1,7 @@
-import type { AwsRegion } from '@remotion/lambda'
-import { sleep } from 'workflow'
+import { join } from 'node:path'
 
 import {
   GENERATED_BUCKET,
-  getRemotionConfig,
   isRemotionConfigured,
 } from '@/lib/fulfillment/config'
 import { generateStaticAssetSet } from '@/lib/fulfillment/generate-static-assets'
@@ -13,13 +11,6 @@ import type {
   CreativeSubmission,
 } from '@/lib/fulfillment/types'
 import { getServiceSupabaseClient } from '@/lib/supabase/admin'
-
-type RenderHandle = {
-  bucketName: string
-  functionName: string
-  region: AwsRegion
-  renderId: string
-}
 
 type RenderInput = {
   signedSourceUrls: string[]
@@ -44,126 +35,115 @@ async function generateStaticStep(
   return result
 }
 
-async function startReelStep(
+async function renderAndStoreReelStep(
   submissionId: string,
   accessTier: AssetAccessTier,
   input: RenderInput,
-): Promise<RenderHandle | null> {
+): Promise<boolean> {
   'use step'
-  console.info('[fulfillment/start-reel] enter', { accessTier, submissionId })
+  console.info('[fulfillment/render-reel] enter', { accessTier, submissionId })
   if (!isRemotionConfigured()) {
-    console.info('[fulfillment/start-reel] exit', {
+    console.info('[fulfillment/render-reel] exit', {
       accessTier,
-      reason: 'remotion_not_configured',
+      reason: 'vercel_sandbox_unavailable',
       submissionId,
     })
-    return null
+    return false
   }
 
-  const config = getRemotionConfig()
-  const region = config.region as AwsRegion
-  const { renderMediaOnLambda } = await import('@remotion/lambda')
-  const render = await renderMediaOnLambda({
-    codec: 'h264',
-    composition: 'AutoPostVehicleReel',
-    deleteAfter: '1-day',
-    downloadBehavior: { type: 'download', fileName: null },
-    functionName: config.functionName,
-    imageFormat: 'jpeg',
-    inputProps: {
-      photos: input.signedSourceUrls,
-      phone: input.submission.phone,
-      priceLabel: `${new Intl.NumberFormat('en-US', { maximumFractionDigits: 2 }).format(input.submission.price)} ${input.submission.price_currency}`,
-      publicReference: input.submission.public_reference,
-      vehicleModel: input.submission.vehicle_model,
-      vehicleYear: input.submission.vehicle_year,
-      watermarked: accessTier === 'preview',
+  const { addBundleToSandbox, createSandbox, renderMediaOnVercel } =
+    await import('@remotion/vercel')
+  const sandbox = await createSandbox({
+    timeoutInMilliseconds: 8 * 60 * 1000,
+    onProgress: ({ message, progress }) => {
+      console.info('[fulfillment/render-reel] sandbox', {
+        message,
+        progress: Math.round(progress * 100),
+        submissionId,
+      })
     },
-    maxRetries: 2,
-    privacy: 'private',
-    region,
-    serveUrl: config.serveUrl,
   })
-  console.info('[fulfillment/start-reel] exit', {
-    accessTier,
-    renderId: render.renderId,
-    submissionId,
-  })
-  return {
-    bucketName: render.bucketName,
-    functionName: config.functionName,
-    region,
-    renderId: render.renderId,
-  }
-}
 
-async function pollReelStep(handle: RenderHandle) {
-  'use step'
-  console.info('[fulfillment/poll-reel] enter', { renderId: handle.renderId })
-  const { getRenderProgress } = await import('@remotion/lambda')
-  const progress = await getRenderProgress(handle)
-  if (progress.fatalErrorEncountered || progress.errors.length > 0) {
-    throw new Error('reel_render_failed')
-  }
-  console.info('[fulfillment/poll-reel] exit', {
-    done: progress.done,
-    progress: progress.overallProgress,
-    renderId: handle.renderId,
-  })
-  return { done: progress.done, outputFile: progress.outputFile }
-}
-
-async function storeReelStep(
-  submissionId: string,
-  accessTier: AssetAccessTier,
-  outputFile: string,
-) {
-  'use step'
-  console.info('[fulfillment/store-reel] enter', { accessTier, submissionId })
-  const abortController = new AbortController()
-  const timeout = setTimeout(() => abortController.abort(), 60_000)
-  let buffer: Buffer
   try {
-    const response = await fetch(outputFile, {
-      cache: 'no-store',
-      signal: abortController.signal,
+    await addBundleToSandbox({
+      sandbox,
+      bundleDir: join(process.cwd(), '.remotion'),
     })
-    if (!response.ok) throw new Error('reel_download_failed')
-    buffer = Buffer.from(await response.arrayBuffer())
+    let lastProgressBucket = -1
+    const { contentType, sandboxFilePath } = await renderMediaOnVercel({
+      sandbox,
+      codec: 'h264',
+      compositionId: 'AutoPostVehicleReel',
+      imageFormat: 'jpeg',
+      inputProps: {
+        photos: input.signedSourceUrls,
+        phone: input.submission.phone,
+        priceLabel: `${new Intl.NumberFormat('en-US', { maximumFractionDigits: 2 }).format(input.submission.price)} ${input.submission.price_currency}`,
+        publicReference: input.submission.public_reference,
+        vehicleModel: input.submission.vehicle_model,
+        vehicleYear: input.submission.vehicle_year,
+        watermarked: accessTier === 'preview',
+      },
+      jpegQuality: 85,
+      onProgress: (update) => {
+        const progressBucket = Math.floor(update.overallProgress * 4)
+        if (progressBucket <= lastProgressBucket) return
+        lastProgressBucket = progressBucket
+        console.info('[fulfillment/render-reel] render', {
+          progress: Math.round(update.overallProgress * 100),
+          stage: update.stage,
+          submissionId,
+        })
+      },
+      timeoutInMilliseconds: 60_000,
+      x264Preset: 'veryfast',
+    })
+    if (contentType !== 'video/mp4')
+      throw new Error('reel_content_type_invalid')
+
+    const buffer = await sandbox.readFileToBuffer({ path: sandboxFilePath })
+    if (!buffer || buffer.byteLength === 0) {
+      throw new Error('reel_output_unavailable')
+    }
+
+    const service = getServiceSupabaseClient()
+    const storagePath = `generated/${submissionId}/${accessTier}/reel.mp4`
+    const filename = `AutoPost-${accessTier}-reel.mp4`
+    const { error: uploadError } = await service.storage
+      .from(GENERATED_BUCKET)
+      .upload(storagePath, buffer, {
+        cacheControl: accessTier === 'paid' ? '31536000' : '3600',
+        contentType,
+        upsert: true,
+      })
+    if (uploadError) throw new Error('reel_upload_failed')
+
+    const { error: rowError } = await service.from('generated_assets').upsert(
+      {
+        access_tier: accessTier,
+        asset_kind: 'reel',
+        file_size: buffer.byteLength,
+        filename,
+        mime_type: contentType,
+        storage_path: storagePath,
+        submission_id: submissionId,
+      },
+      { onConflict: 'submission_id,access_tier,asset_kind' },
+    )
+    if (rowError) throw new Error('reel_record_failed')
+    console.info('[fulfillment/render-reel] exit', {
+      accessTier,
+      fileSize: buffer.byteLength,
+      submissionId,
+    })
+    return true
   } finally {
-    clearTimeout(timeout)
-  }
-
-  const service = getServiceSupabaseClient()
-  const storagePath = `generated/${submissionId}/${accessTier}/reel.mp4`
-  const filename = `AutoPost-${accessTier}-reel.mp4`
-  const { error: uploadError } = await service.storage
-    .from(GENERATED_BUCKET)
-    .upload(storagePath, buffer, {
-      cacheControl: accessTier === 'paid' ? '31536000' : '3600',
-      contentType: 'video/mp4',
-      upsert: true,
+    // Sandbox instances are persistent by default. Delete the entire instance
+    // so every render is ephemeral and does not leave billable snapshots.
+    await sandbox.delete().catch(async () => {
+      await sandbox.stop().catch(() => undefined)
     })
-  if (uploadError) throw new Error('reel_upload_failed')
-
-  const { error: rowError } = await service.from('generated_assets').upsert(
-    {
-      access_tier: accessTier,
-      asset_kind: 'reel',
-      file_size: buffer.byteLength,
-      filename,
-      mime_type: 'video/mp4',
-      storage_path: storagePath,
-      submission_id: submissionId,
-    },
-    { onConflict: 'submission_id,access_tier,asset_kind' },
-  )
-  if (rowError) throw new Error('reel_record_failed')
-  console.info('[fulfillment/store-reel] exit', {
-    accessTier,
-    fileSize: buffer.byteLength,
-    submissionId,
-  })
+  }
 }
 
 async function buildPackageStep(submissionId: string) {
@@ -242,30 +222,11 @@ async function markFailedStep(
   console.info('[fulfillment/failed] exit', { errorCode, submissionId })
 }
 
-async function renderAndStoreReel(
-  submissionId: string,
-  accessTier: AssetAccessTier,
-  input: RenderInput,
-) {
-  const handle = await startReelStep(submissionId, accessTier, input)
-  if (!handle) return false
-
-  for (let attempt = 0; attempt < 120; attempt += 1) {
-    const progress = await pollReelStep(handle)
-    if (progress.done && progress.outputFile) {
-      await storeReelStep(submissionId, accessTier, progress.outputFile)
-      return true
-    }
-    await sleep('5s')
-  }
-  throw new Error('reel_render_timeout')
-}
-
 export async function previewFulfillmentWorkflow(submissionId: string) {
   'use workflow'
   try {
     const generated = await generateStaticStep(submissionId, 'preview')
-    await renderAndStoreReel(submissionId, 'preview', generated)
+    await renderAndStoreReelStep(submissionId, 'preview', generated)
     await markPreviewReadyStep(submissionId)
     return { status: 'preview_ready' as const }
   } catch (error) {
@@ -278,7 +239,7 @@ export async function paidFulfillmentWorkflow(submissionId: string) {
   'use workflow'
   try {
     const generated = await generateStaticStep(submissionId, 'paid')
-    await renderAndStoreReel(submissionId, 'paid', generated)
+    await renderAndStoreReelStep(submissionId, 'paid', generated)
     await buildPackageStep(submissionId)
     await markPaidReadyStep(submissionId)
     return { status: 'ready' as const }
