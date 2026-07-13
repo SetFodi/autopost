@@ -3,7 +3,7 @@ import { Check } from 'lucide-react'
 import { TrackedCta } from '@/components/landing/tracked-cta'
 
 const previewItems = [
-  'წყლის ნიშნით დაცული',
+  'Watermark-ით დაცული',
   'Reel-ისა და დიზაინების წინასწარი ნახვა',
   'პირადი შედეგის გვერდი',
   'ავტომატური დამუშავება',
@@ -11,7 +11,7 @@ const previewItems = [
 ] as const
 
 const packageItems = [
-  'Reel წყლის ნიშნის გარეშე',
+  'Reel watermark-ის გარეშე',
   '3 Story',
   '6-სლაიდიანი carousel',
   'მთავარი კვადრატული ბარათი',

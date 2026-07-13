@@ -17,7 +17,7 @@ const steps = [
     number: '03',
     title: 'მიიღე Preview',
     description:
-      'პირად გვერდზე წყლის ნიშნით დაცული Preview ავტომატურად გამოჩნდება.',
+      'პირად გვერდზე watermark-ით დაცული Preview ავტომატურად გამოჩნდება.',
     icon: Clock4,
   },
 ] as const

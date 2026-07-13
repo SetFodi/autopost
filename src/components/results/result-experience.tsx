@@ -273,7 +273,7 @@ export function ResultExperience({
               </h2>
             </div>
             <p className="text-ivory/45 max-w-md text-sm leading-7">
-              Preview ფაილები დაცულია წყლის ნიშნით. შეაფასე დიზაინი და გადაიხადე
+              Preview ფაილები დაცულია watermark-ით. შეაფასე დიზაინი და გადაიხადე
               მხოლოდ თუ მოგწონს.
             </p>
           </div>
@@ -306,7 +306,7 @@ export function ResultExperience({
               Publish-ready package
             </p>
             <h2 className="font-display mt-5 text-4xl font-black tracking-[-0.055em] sm:text-6xl">
-              წყლის ნიშნის გარეშე
+              Watermark-ის გარეშე
             </h2>
             <div className="mt-8 grid gap-3 text-sm sm:grid-cols-2">
               {[
