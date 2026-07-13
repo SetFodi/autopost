@@ -83,6 +83,9 @@ function cleanupService(
     if (name === 'cleanup_expired_rate_limit_events') {
       return { data: 12, error: null }
     }
+    if (name === 'claim_due_deletion_tombstones') {
+      return { data: [], error: null }
+    }
     throw new Error(`Unexpected RPC: ${name}`)
   })
   const query = {

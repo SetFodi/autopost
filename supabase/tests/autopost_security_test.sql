@@ -2,7 +2,7 @@ begin;
 
 create extension if not exists pgtap with schema extensions;
 
-select plan(27);
+select plan(36);
 
 select has_table(
   'public',
@@ -21,6 +21,45 @@ select has_table(
   'public',
   'rate_limit_events',
   'the database-backed rate-limit ledger exists'
+);
+
+select has_table('public', 'fulfillments', 'the fulfillment ledger exists');
+
+select has_table(
+  'public',
+  'generated_assets',
+  'the generated-asset ledger exists'
+);
+
+select has_table('public', 'payments', 'the verified payment ledger exists');
+
+select has_table(
+  'private',
+  'deleted_submission_tombstones',
+  'delayed deletion tombstones exist'
+);
+
+select has_function(
+  'public',
+  'queue_fulfillment',
+  array['uuid'],
+  'the atomic preview workflow reservation exists'
+);
+
+select has_function(
+  'public',
+  'confirm_tbc_payment',
+  array['text', 'text', 'numeric', 'text', 'text', 'jsonb', 'text'],
+  'the atomic verified-payment transition exists'
+);
+
+select ok(
+  not pg_catalog.has_table_privilege(
+    'anon',
+    'private.deleted_submission_tombstones',
+    'select'
+  ),
+  'anonymous clients cannot read deletion tombstones'
 );
 
 select has_function(
@@ -91,7 +130,10 @@ select ok(
       'public.submissions',
       'public.submission_files',
       'public.analytics_events',
-      'public.rate_limit_events'
+      'public.rate_limit_events',
+      'public.fulfillments',
+      'public.generated_assets',
+      'public.payments'
     ]) as protected(table_name)
     where pg_catalog.has_table_privilege('anon', protected.table_name, 'select')
       or pg_catalog.has_table_privilege('anon', protected.table_name, 'insert')
@@ -108,7 +150,10 @@ select ok(
       'public.submissions',
       'public.submission_files',
       'public.analytics_events',
-      'public.rate_limit_events'
+      'public.rate_limit_events',
+      'public.fulfillments',
+      'public.generated_assets',
+      'public.payments'
     ]) as protected(table_name)
     where pg_catalog.has_table_privilege('authenticated', protected.table_name, 'select')
       or pg_catalog.has_table_privilege('authenticated', protected.table_name, 'insert')
@@ -126,7 +171,12 @@ select ok(
       'public.complete_submission(uuid,jsonb)',
       'public.claim_stale_submissions(timestamptz,integer)',
       'public.delete_claimed_submission(uuid,uuid)',
-      'public.cleanup_expired_rate_limit_events(timestamptz)'
+      'public.cleanup_expired_rate_limit_events(timestamptz)',
+      'public.queue_fulfillment(uuid)',
+      'public.confirm_tbc_payment(text,text,numeric,text,text,jsonb,text)',
+      'public.create_submission_deletion_tombstone(uuid)',
+      'public.claim_due_deletion_tombstones(integer)',
+      'public.delete_claimed_deletion_tombstone(uuid,uuid)'
     ]) as protected(signature)
     where pg_catalog.has_function_privilege('anon', protected.signature, 'execute')
   ),
@@ -141,7 +191,12 @@ select ok(
       'public.complete_submission(uuid,jsonb)',
       'public.claim_stale_submissions(timestamptz,integer)',
       'public.delete_claimed_submission(uuid,uuid)',
-      'public.cleanup_expired_rate_limit_events(timestamptz)'
+      'public.cleanup_expired_rate_limit_events(timestamptz)',
+      'public.queue_fulfillment(uuid)',
+      'public.confirm_tbc_payment(text,text,numeric,text,text,jsonb,text)',
+      'public.create_submission_deletion_tombstone(uuid)',
+      'public.claim_due_deletion_tombstones(integer)',
+      'public.delete_claimed_deletion_tombstone(uuid,uuid)'
     ]) as protected(signature)
     where pg_catalog.has_function_privilege('authenticated', protected.signature, 'execute')
   ),
@@ -156,6 +211,26 @@ select is(
   ),
   false,
   'vehicle-uploads is private'
+);
+
+select is(
+  (
+    select public
+    from storage.buckets
+    where id = 'vehicle-generated'
+  ),
+  false,
+  'vehicle-generated is private'
+);
+
+select is(
+  (
+    select file_size_limit
+    from storage.buckets
+    where id = 'vehicle-generated'
+  ),
+  134217728::bigint,
+  'generated deliverables have a bounded 128 MiB object limit'
 );
 
 select is(

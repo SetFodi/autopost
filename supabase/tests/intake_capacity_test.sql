@@ -23,8 +23,8 @@ select is(
     from private.intake_capacity_config
     where bucket_id = 'vehicle-uploads'
   ),
-  805306368::bigint,
-  'the default leaves headroom below the Free Storage quota'
+  536870912::bigint,
+  'automation reserves half of the Free Storage quota for generated assets'
 );
 
 select ok(

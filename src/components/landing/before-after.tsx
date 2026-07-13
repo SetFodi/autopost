@@ -40,13 +40,13 @@ export function BeforeAfter() {
               <span className="text-ivory/55 font-mono text-[10px] font-semibold tracking-[0.18em]">
                 საწყისი მასალა
               </span>
-              <span className="plate-chip text-ivory/50">5–15 ფოტო</span>
+              <span className="plate-chip text-ivory/50">3–15 ფოტო</span>
             </div>
             <div className="grid flex-1 gap-2 p-2">
               {sourcePhotos.map((photo) => (
                 <div
                   key={photo.src}
-                  className="relative aspect-[16/10] overflow-hidden bg-black/40"
+                  className="relative aspect-[3/2] overflow-hidden bg-black/40"
                 >
                   <Image
                     src={photo.src}

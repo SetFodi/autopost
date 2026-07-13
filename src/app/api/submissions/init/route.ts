@@ -137,9 +137,14 @@ export async function POST(request: Request) {
 
     if (beginError) {
       if (beginError.message.includes('intake_capacity_exceeded')) {
-        return errorResponse('RATE_LIMITED', 429, undefined, {
-          'Retry-After': String(CAPACITY_RETRY_AFTER_SECONDS),
-        })
+        return errorResponse(
+          'INTAKE_CAPACITY_EXCEEDED',
+          503,
+          'ახალი განაცხადების მიღება დროებით შეჩერებულია. მოგვიანებით სცადეთ.',
+          {
+            'Retry-After': String(CAPACITY_RETRY_AFTER_SECONDS),
+          },
+        )
       }
 
       if (beginError.message.includes('idempotency_conflict')) {

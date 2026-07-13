@@ -18,6 +18,39 @@ export type SubmissionUploadState = 'pending' | 'complete' | 'failed'
 
 export type VehiclePriceCurrency = 'GEL' | 'USD'
 
+export type FulfillmentStatus =
+  | 'queued'
+  | 'generating_preview'
+  | 'preview_ready'
+  | 'generating_paid'
+  | 'ready'
+  | 'failed'
+
+export type GeneratedAssetAccessTier = 'preview' | 'paid'
+export type GeneratedAssetKind =
+  | 'square'
+  | 'story_1'
+  | 'story_2'
+  | 'story_3'
+  | 'carousel_1'
+  | 'carousel_2'
+  | 'carousel_3'
+  | 'carousel_4'
+  | 'carousel_5'
+  | 'carousel_6'
+  | 'copy'
+  | 'reel'
+  | 'package'
+
+export type PaymentStatus =
+  | 'created'
+  | 'processing'
+  | 'succeeded'
+  | 'failed'
+  | 'expired'
+  | 'returned'
+  | 'cancelled'
+
 export type AnalyticsEventName =
   | 'landing_view'
   | 'primary_cta_click'
@@ -31,6 +64,177 @@ export type AnalyticsEventName =
 export type Database = {
   public: {
     Tables: {
+      fulfillments: {
+        Row: {
+          created_at: string
+          failed_at: string | null
+          last_error_code: string | null
+          paid_started_at: string | null
+          paid_workflow_run_id: string | null
+          preview_ready_at: string | null
+          preview_started_at: string | null
+          preview_workflow_run_id: string | null
+          ready_at: string | null
+          status: FulfillmentStatus
+          submission_id: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          failed_at?: string | null
+          last_error_code?: string | null
+          paid_started_at?: string | null
+          paid_workflow_run_id?: string | null
+          preview_ready_at?: string | null
+          preview_started_at?: string | null
+          preview_workflow_run_id?: string | null
+          ready_at?: string | null
+          status?: FulfillmentStatus
+          submission_id: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          failed_at?: string | null
+          last_error_code?: string | null
+          paid_started_at?: string | null
+          paid_workflow_run_id?: string | null
+          preview_ready_at?: string | null
+          preview_started_at?: string | null
+          preview_workflow_run_id?: string | null
+          ready_at?: string | null
+          status?: FulfillmentStatus
+          submission_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: 'fulfillments_submission_id_fkey'
+            columns: ['submission_id']
+            isOneToOne: true
+            referencedRelation: 'submissions'
+            referencedColumns: ['id']
+          },
+        ]
+      }
+      generated_assets: {
+        Row: {
+          access_tier: GeneratedAssetAccessTier
+          asset_kind: GeneratedAssetKind
+          created_at: string
+          file_size: number
+          filename: string
+          id: string
+          mime_type:
+            | 'image/png'
+            | 'text/plain; charset=utf-8'
+            | 'video/mp4'
+            | 'application/zip'
+          storage_path: string
+          submission_id: string
+          updated_at: string
+        }
+        Insert: {
+          access_tier: GeneratedAssetAccessTier
+          asset_kind: GeneratedAssetKind
+          created_at?: string
+          file_size: number
+          filename: string
+          id?: string
+          mime_type:
+            | 'image/png'
+            | 'text/plain; charset=utf-8'
+            | 'video/mp4'
+            | 'application/zip'
+          storage_path: string
+          submission_id: string
+          updated_at?: string
+        }
+        Update: {
+          access_tier?: GeneratedAssetAccessTier
+          asset_kind?: GeneratedAssetKind
+          created_at?: string
+          file_size?: number
+          filename?: string
+          id?: string
+          mime_type?:
+            | 'image/png'
+            | 'text/plain; charset=utf-8'
+            | 'video/mp4'
+            | 'application/zip'
+          storage_path?: string
+          submission_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: 'generated_assets_submission_id_fkey'
+            columns: ['submission_id']
+            isOneToOne: false
+            referencedRelation: 'submissions'
+            referencedColumns: ['id']
+          },
+        ]
+      }
+      payments: {
+        Row: {
+          amount: number
+          checkout_url: string | null
+          created_at: string
+          currency: 'GEL'
+          id: string
+          merchant_payment_id: string
+          paid_at: string | null
+          provider: 'tbc'
+          provider_payment_id: string | null
+          provider_result_code: string | null
+          status: PaymentStatus
+          submission_id: string
+          updated_at: string
+          verified_payload: Json
+        }
+        Insert: {
+          amount: number
+          checkout_url?: string | null
+          created_at?: string
+          currency: 'GEL'
+          id?: string
+          merchant_payment_id: string
+          paid_at?: string | null
+          provider?: 'tbc'
+          provider_payment_id?: string | null
+          provider_result_code?: string | null
+          status?: PaymentStatus
+          submission_id: string
+          updated_at?: string
+          verified_payload?: Json
+        }
+        Update: {
+          amount?: number
+          checkout_url?: string | null
+          created_at?: string
+          currency?: 'GEL'
+          id?: string
+          merchant_payment_id?: string
+          paid_at?: string | null
+          provider?: 'tbc'
+          provider_payment_id?: string | null
+          provider_result_code?: string | null
+          status?: PaymentStatus
+          submission_id?: string
+          updated_at?: string
+          verified_payload?: Json
+        }
+        Relationships: [
+          {
+            foreignKeyName: 'payments_submission_id_fkey'
+            columns: ['submission_id']
+            isOneToOne: false
+            referencedRelation: 'submissions'
+            referencedColumns: ['id']
+          },
+        ]
+      }
       analytics_events: {
         Row: {
           created_at: string
@@ -294,6 +498,39 @@ export type Database = {
         Args: { p_expired_before: string }
         Returns: number
       }
+      claim_due_deletion_tombstones: {
+        Args: { p_batch_size: number }
+        Returns: {
+          claim_token: string
+          storage_prefix: string
+          submission_id: string
+        }[]
+      }
+      confirm_tbc_payment: {
+        Args: {
+          p_amount: number
+          p_currency: string
+          p_delivery_url: string
+          p_provider_payment_id: string
+          p_provider_status: string
+          p_result_code: string
+          p_verified_payload: Json
+        }
+        Returns: {
+          paid_start_token: string | null
+          payment_status: PaymentStatus
+          should_start_paid_generation: boolean
+          submission_id: string
+        }[]
+      }
+      create_submission_deletion_tombstone: {
+        Args: { p_submission_id: string }
+        Returns: boolean
+      }
+      delete_claimed_deletion_tombstone: {
+        Args: { p_claim_token: string; p_submission_id: string }
+        Returns: boolean
+      }
       complete_submission: {
         Args: {
           p_submission_id: string
@@ -326,6 +563,14 @@ export type Database = {
           p_submission_id: string
         }
         Returns: boolean
+      }
+      queue_fulfillment: {
+        Args: { p_submission_id: string }
+        Returns: {
+          fulfillment_status: FulfillmentStatus
+          preview_start_token: string | null
+          should_start_preview: boolean
+        }[]
       }
     }
     Enums: Record<never, never>

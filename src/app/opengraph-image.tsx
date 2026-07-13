@@ -1,7 +1,7 @@
 import { ImageResponse } from 'next/og'
 
 export const alt =
-  'AutoPost — professional car sales content from ordinary photos'
+  'AutoPost — მანქანის პროფესიონალური რეკლამა ჩვეულებრივი ფოტოებიდან'
 export const size = { width: 1200, height: 630 }
 export const contentType = 'image/png'
 
@@ -70,7 +70,7 @@ export default function OpenGraphImage() {
             letterSpacing: 5,
           }}
         >
-          FOR CARS
+          მანქანის გასაყიდად
         </div>
       </div>
 
@@ -83,7 +83,7 @@ export default function OpenGraphImage() {
             letterSpacing: 2,
           }}
         >
-          10 PHOTOS →
+          3–15 ფოტო →
         </div>
         <div
           style={{
@@ -94,7 +94,7 @@ export default function OpenGraphImage() {
             marginTop: 12,
           }}
         >
-          A PROFESSIONAL CAR AD
+          პროფესიონალური მანქანის რეკლამა
         </div>
       </div>
 
@@ -107,10 +107,10 @@ export default function OpenGraphImage() {
         }}
       >
         <div style={{ color: 'rgba(244,238,228,.58)', fontSize: 20 }}>
-          Reel · Story · Carousel · Sales copy
+          Reel · Story · Carousel · პოსტი · ტექსტი
         </div>
         <div style={{ color: '#e8a03a', fontSize: 20, fontWeight: 700 }}>
-          FREE FIRST PREVIEW
+          პირველი PREVIEW უფასოა
         </div>
       </div>
     </div>,

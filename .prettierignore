@@ -6,3 +6,4 @@ supabase/**/*.sql
 AGENTS.md
 eslint.config.mjs
 postcss.config.mjs
+src/app/.well-known/workflow/**

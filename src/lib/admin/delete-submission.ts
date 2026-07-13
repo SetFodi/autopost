@@ -1,5 +1,6 @@
 import 'server-only'
 
+import { GENERATED_BUCKET } from '@/lib/fulfillment/config'
 import { getServiceSupabaseClient } from '@/lib/supabase/admin'
 import { SUBMISSION_BUCKET } from '@/lib/validation/submission'
 
@@ -8,7 +9,12 @@ export type DeleteSubmissionResult =
   | {
       ok: false
       stage:
-        'configuration' | 'lookup' | 'confirmation' | 'storage' | 'database'
+        | 'configuration'
+        | 'lookup'
+        | 'confirmation'
+        | 'tombstone'
+        | 'storage'
+        | 'database'
       storageRemoved: boolean
     }
 
@@ -77,38 +83,62 @@ export async function deleteSubmissionPermanently({
   }
 
   let filesResult
+  let generatedAssetsResult
   try {
-    filesResult = await service
-      .from('submission_files')
-      .select('storage_path')
-      .eq('submission_id', id)
+    ;[filesResult, generatedAssetsResult] = await Promise.all([
+      service
+        .from('submission_files')
+        .select('storage_path')
+        .eq('submission_id', id),
+      service
+        .from('generated_assets')
+        .select('storage_path')
+        .eq('submission_id', id),
+    ])
   } catch {
     console.error('[admin/delete] file lookup threw')
     return { ok: false, stage: 'lookup', storageRemoved: false }
   }
 
-  if (filesResult.error) {
+  if (filesResult.error || generatedAssetsResult.error) {
     console.error('[admin/delete] file lookup failed', {
-      code: filesResult.error.code,
+      code: filesResult.error?.code ?? generatedAssetsResult.error?.code,
     })
     return { ok: false, stage: 'lookup', storageRemoved: false }
   }
 
-  const storagePaths = (filesResult.data ?? []).map((file) => file.storage_path)
+  const sourcePaths = (filesResult.data ?? []).map((file) => file.storage_path)
+  const generatedPaths = (generatedAssetsResult.data ?? []).map(
+    (file) => file.storage_path,
+  )
 
-  if (storagePaths.length > 0) {
-    try {
-      const { error } = await service.storage
-        .from(SUBMISSION_BUCKET)
-        .remove(storagePaths)
+  const { data: tombstoned, error: tombstoneError } = await service.rpc(
+    'create_submission_deletion_tombstone',
+    { p_submission_id: id },
+  )
+  if (tombstoneError || !tombstoned) {
+    console.error('[admin/delete] deletion tombstone failed', {
+      code: tombstoneError?.code,
+    })
+    return { ok: false, stage: 'tombstone', storageRemoved: false }
+  }
 
-      if (error) {
-        console.error('[admin/delete] storage removal failed')
+  for (const [bucket, paths] of [
+    [SUBMISSION_BUCKET, sourcePaths],
+    [GENERATED_BUCKET, generatedPaths],
+  ] as const) {
+    if (paths.length > 0) {
+      try {
+        const { error } = await service.storage.from(bucket).remove(paths)
+
+        if (error) {
+          console.error('[admin/delete] storage removal failed', { bucket })
+          return { ok: false, stage: 'storage', storageRemoved: false }
+        }
+      } catch {
+        console.error('[admin/delete] storage removal threw', { bucket })
         return { ok: false, stage: 'storage', storageRemoved: false }
       }
-    } catch {
-      console.error('[admin/delete] storage removal threw')
-      return { ok: false, stage: 'storage', storageRemoved: false }
     }
   }
 

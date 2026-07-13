@@ -3,7 +3,7 @@ import { z } from 'zod'
 import { georgianPhoneSchema } from './phone'
 
 export const SUBMISSION_BUCKET = 'vehicle-uploads'
-export const MIN_PHOTO_COUNT = 5
+export const MIN_PHOTO_COUNT = 3
 export const MAX_PHOTO_COUNT = 15
 export const MAX_FILE_SIZE_BYTES = 12 * 1024 * 1024
 export const MAX_TOTAL_UPLOAD_SIZE_BYTES = 120 * 1024 * 1024
@@ -103,7 +103,7 @@ export const submissionInitSchema = z
     website: z.string().max(500).optional().default(''),
     files: z
       .array(submissionFileMetadataSchema)
-      .min(MIN_PHOTO_COUNT, 'ატვირთეთ მინიმუმ 5 ფოტო.')
+      .min(MIN_PHOTO_COUNT, 'ატვირთეთ მინიმუმ 3 ფოტო.')
       .max(MAX_PHOTO_COUNT, 'შეგიძლიათ ატვირთოთ მაქსიმუმ 15 ფოტო.'),
   })
   .strict()

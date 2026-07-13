@@ -14,11 +14,13 @@ const STORAGE_PATHS = [
   `submissions/${SUBMISSION_ID}/one.jpg`,
   `submissions/${SUBMISSION_ID}/two.jpg`,
 ]
+const GENERATED_PATH = `generated/${SUBMISSION_ID}/preview/square.png`
 
 type ServiceOptions = {
   storageError?: boolean
   databaseError?: boolean
   databaseRowAbsentAfterError?: boolean
+  tombstoneError?: boolean
 }
 
 function chain(result: unknown, onResolve?: () => void) {
@@ -35,11 +37,11 @@ function chain(result: unknown, onResolve?: () => void) {
   return query
 }
 
-function fileChain() {
+function fileChain(paths = STORAGE_PATHS) {
   const query = {
     select: vi.fn(() => query),
     eq: vi.fn(async () => ({
-      data: STORAGE_PATHS.map((storage_path) => ({ storage_path })),
+      data: paths.map((storage_path) => ({ storage_path })),
       error: null,
     })),
   }
@@ -54,6 +56,7 @@ function deletionService(options: ServiceOptions = {}) {
     error: null,
   })
   const files = fileChain()
+  const generatedAssets = fileChain([GENERATED_PATH])
   const deletion = chain(
     options.databaseError
       ? { data: null, error: { code: 'XX000' } }
@@ -70,6 +73,7 @@ function deletionService(options: ServiceOptions = {}) {
     .fn()
     .mockReturnValueOnce(lookup)
     .mockReturnValueOnce(files)
+    .mockReturnValueOnce(generatedAssets)
     .mockReturnValueOnce(deletion)
 
   if (options.databaseError) {
@@ -86,6 +90,12 @@ function deletionService(options: ServiceOptions = {}) {
   return {
     service: {
       from,
+      rpc: vi.fn(async () => {
+        operations.push('tombstone')
+        return options.tombstoneError
+          ? { data: null, error: { code: 'XX000' } }
+          : { data: true, error: null }
+      }),
       storage: { from: vi.fn(() => ({ remove })) },
     },
     from,
@@ -128,8 +138,14 @@ describe('permanent admin submission deletion', () => {
       }),
     ).resolves.toEqual({ ok: true })
 
-    expect(testService.remove).toHaveBeenCalledWith(STORAGE_PATHS)
-    expect(testService.operations).toEqual(['storage', 'database'])
+    expect(testService.remove).toHaveBeenNthCalledWith(1, STORAGE_PATHS)
+    expect(testService.remove).toHaveBeenNthCalledWith(2, [GENERATED_PATH])
+    expect(testService.operations).toEqual([
+      'tombstone',
+      'storage',
+      'storage',
+      'database',
+    ])
   })
 
   it('leaves all database rows intact when Storage deletion fails', async () => {
@@ -146,8 +162,8 @@ describe('permanent admin submission deletion', () => {
       stage: 'storage',
       storageRemoved: false,
     })
-    expect(testService.from).toHaveBeenCalledTimes(2)
-    expect(testService.operations).toEqual(['storage'])
+    expect(testService.from).toHaveBeenCalledTimes(3)
+    expect(testService.operations).toEqual(['tombstone', 'storage'])
   })
 
   it('reports a safely retryable partial failure after Storage succeeds', async () => {
@@ -164,7 +180,12 @@ describe('permanent admin submission deletion', () => {
       stage: 'database',
       storageRemoved: true,
     })
-    expect(testService.operations).toEqual(['storage', 'database'])
+    expect(testService.operations).toEqual([
+      'tombstone',
+      'storage',
+      'storage',
+      'database',
+    ])
   })
 
   it('recognizes a committed delete when only its response failed', async () => {

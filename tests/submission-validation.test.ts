@@ -37,7 +37,7 @@ function validPayload() {
     additionalInfo: 'სერვისის სრული ისტორია.',
     consentGiven: true,
     website: '',
-    files: files(5),
+    files: files(3),
   }
 }
 
@@ -49,7 +49,7 @@ describe('submissionInitSchema', () => {
     expect(result.price).toBe(42_500)
     expect(result.priceCurrency).toBe('USD')
     expect(result.mileage).toBe(38_000)
-    expect(result.files).toHaveLength(5)
+    expect(result.files).toHaveLength(3)
   })
 
   it('requires a supported GEL or USD vehicle-price currency', () => {
@@ -74,7 +74,7 @@ describe('submissionInitSchema', () => {
   })
 
   it('enforces the minimum photo count', () => {
-    const payload = { ...validPayload(), files: files(4) }
+    const payload = { ...validPayload(), files: files(2) }
     expect(submissionInitSchema.safeParse(payload).success).toBe(false)
   })
 

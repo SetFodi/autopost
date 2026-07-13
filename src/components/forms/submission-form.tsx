@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useRef, useState, type FormEvent } from 'react'
-import { zodResolver } from '@hookform/resolvers/zod'
+import { standardSchemaResolver } from '@hookform/resolvers/standard-schema'
 import {
   AlertCircle,
   Check,
@@ -43,6 +43,7 @@ import {
   type SubmissionCompleteInput,
   type SubmissionInitInput,
 } from '@/lib/validation/submission'
+import type { SubmissionCompleteResponse } from '@/types/submission'
 
 type SubmissionPhase =
   | 'idle'
@@ -75,6 +76,7 @@ interface SuccessDetails {
   publicReference: string
   vehicleModel: string
   photoCount: number
+  resultUrl: string
 }
 
 interface SubmissionFormProps {
@@ -117,21 +119,20 @@ function genericResponseMessage(status: number) {
 
 async function parseSuccessfulResponse<T>(response: Response): Promise<T> {
   if (!response.ok) {
-    if (response.status === 503) {
-      try {
-        const payload = (await response.json()) as {
-          code?: unknown
-          error?: unknown
-        }
-        if (
-          payload.code === 'CONFIGURATION_ERROR' &&
-          typeof payload.error === 'string'
-        ) {
-          throw new SubmissionError(payload.error)
-        }
-      } catch (error) {
-        if (error instanceof SubmissionError) throw error
+    try {
+      const payload = (await response.json()) as {
+        code?: unknown
+        error?: unknown
       }
+      if (
+        (payload.code === 'CONFIGURATION_ERROR' ||
+          payload.code === 'INTAKE_CAPACITY_EXCEEDED') &&
+        typeof payload.error === 'string'
+      ) {
+        throw new SubmissionError(payload.error)
+      }
+    } catch (error) {
+      if (error instanceof SubmissionError) throw error
     }
 
     throw new SubmissionError(genericResponseMessage(response.status))
@@ -183,7 +184,7 @@ export function SubmissionForm({ whatsappNumber }: SubmissionFormProps) {
     handleSubmit,
     formState: { errors },
   } = useForm<PublicSubmissionFormValues>({
-    resolver: zodResolver(publicSubmissionFormSchema),
+    resolver: standardSchemaResolver(publicSubmissionFormSchema),
     defaultValues,
     mode: 'onBlur',
   })
@@ -440,7 +441,7 @@ export function SubmissionForm({ whatsappNumber }: SubmissionFormProps) {
     // committed. Let the server verify every immutable path before treating it
     // as a real partial failure; this also makes a retry recover from 409s.
     try {
-      await completeSubmission(attempt)
+      const completion = await completeSubmission(attempt)
       attempt.init.uploads.forEach((upload) =>
         updatePhotoStatus(upload.fileIndex, 'uploaded', 100),
       )
@@ -448,7 +449,7 @@ export function SubmissionForm({ whatsappNumber }: SubmissionFormProps) {
         attempt.uploadedIndexes.add(upload.fileIndex),
       )
       setCompletedUploads(attempt.init.uploads.length)
-      return true
+      return completion
     } catch {
       throw new SubmissionError(
         `${ambiguousFailures[0] + 1}-ე ფოტო ვერ აიტვირთა. უკვე ატვირთული ფოტოები შენახულია — სცადე ხელახლა.`,
@@ -470,7 +471,7 @@ export function SubmissionForm({ whatsappNumber }: SubmissionFormProps) {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(payload),
     })
-    await parseSuccessfulResponse<Record<string, unknown>>(response)
+    return parseSuccessfulResponse<SubmissionCompleteResponse>(response)
   }
 
   async function submit(values: PublicSubmissionFormValues) {
@@ -495,12 +496,14 @@ export function SubmissionForm({ whatsappNumber }: SubmissionFormProps) {
       const attempt =
         uploadAttemptRef.current ?? (await initializeSubmission(values))
       const completedDuringUploadRecovery = await uploadPhotos(attempt)
-      if (!completedDuringUploadRecovery) await completeSubmission(attempt)
+      const completion =
+        completedDuringUploadRecovery || (await completeSubmission(attempt))
 
       const details: SuccessDetails = {
         publicReference: attempt.init.publicReference,
         vehicleModel: values.vehicleModel.trim(),
         photoCount: photos.length,
+        resultUrl: completion.resultUrl,
       }
       trackMetaLeadOnce(details.publicReference)
       setSuccessDetails(details)

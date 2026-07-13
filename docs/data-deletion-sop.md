@@ -20,7 +20,9 @@ unprotected deletion log.
 
 ## 2. Remove separately managed deliverables
 
-If a private Drive/preview folder was created, remove that folder and any copies
+The protected deletion action removes tracked source objects from
+`vehicle-uploads` and generated deliverables from `vehicle-generated`. If a
+legacy private Drive/preview folder was created, remove that folder and any copies
 managed outside AutoPost. The application can delete only its Supabase source
 objects and database records; a saved delivery URL cannot delete an external
 provider's files.

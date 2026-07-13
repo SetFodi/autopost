@@ -1,6 +1,13 @@
 'use client'
 
-import { Check, Clock3, Copy, MessageCircle, ShieldCheck } from 'lucide-react'
+import {
+  ArrowRight,
+  Check,
+  Copy,
+  LoaderCircle,
+  MessageCircle,
+  ShieldCheck,
+} from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
 
 import { TrackedWhatsappLink } from '@/components/landing/tracked-whatsapp-link'
@@ -9,6 +16,7 @@ interface SubmissionSuccessProps {
   publicReference: string
   vehicleModel: string
   photoCount: number
+  resultUrl: string
   whatsappNumber?: string
 }
 
@@ -25,6 +33,7 @@ export function SubmissionSuccess({
   publicReference,
   vehicleModel,
   photoCount,
+  resultUrl,
   whatsappNumber,
 }: SubmissionSuccessProps) {
   const [copied, setCopied] = useState(false)
@@ -66,11 +75,11 @@ export function SubmissionSuccess({
       </div>
 
       <h2 className="font-display text-ivory mt-9 text-4xl leading-[1.05] font-bold tracking-[-0.055em] sm:text-5xl">
-        ფოტოები წარმატებით მივიღეთ
+        AutoPost უკვე ამზადებს Preview-ს
       </h2>
       <p className="text-ivory/64 mt-5 max-w-xl text-base leading-8">
-        თქვენი ავტომობილის Preview მზად იქნება მაქსიმუმ 24 საათში და
-        გამოგიგზავნით მითითებულ WhatsApp ნომერზე.
+        გვერდი შექმნილია და დამუშავება ავტომატურად დაიწყო. გახსენი პირადი
+        შედეგის გვერდი — Preview იქვე გამოჩნდება მზადებისთანავე.
       </p>
 
       <dl className="mt-9 divide-y divide-white/10 border-y border-white/10">
@@ -104,10 +113,14 @@ export function SubmissionSuccess({
         </div>
         <div className="flex items-center justify-between gap-5 py-4">
           <dt className="text-ivory/55 inline-flex items-center gap-2 text-xs">
-            <Clock3 aria-hidden="true" className="size-3.5" /> მიწოდება
+            <LoaderCircle
+              aria-hidden="true"
+              className="size-3.5 animate-spin"
+            />{' '}
+            სტატუსი
           </dt>
           <dd className="text-ivory text-sm font-semibold">
-            მაქსიმუმ 24 საათში
+            ავტომატური დამუშავება
           </dd>
         </div>
       </dl>
@@ -121,11 +134,19 @@ export function SubmissionSuccess({
         გარეშე საჯაროდ არ გამოვაქვეყნებთ.
       </div>
 
+      <a
+        href={resultUrl}
+        className="bg-amber text-graphite mt-6 inline-flex min-h-14 w-full items-center justify-center gap-2 px-5 text-sm font-extrabold transition-colors hover:bg-[#e1ff75]"
+      >
+        პირადი შედეგის გახსნა
+        <ArrowRight aria-hidden="true" className="size-5" />
+      </a>
+
       {whatsappUrl ? (
         <TrackedWhatsappLink
           href={whatsappUrl}
           source="success_support"
-          className="bg-amber text-graphite mt-6 inline-flex min-h-12 w-full items-center justify-center gap-2 px-5 text-sm font-extrabold transition-colors hover:bg-[#e1ff75]"
+          className="text-ivory/70 mt-3 inline-flex min-h-12 w-full items-center justify-center gap-2 border border-white/12 px-5 text-sm font-bold transition-colors hover:border-white/25 hover:text-white"
         >
           <MessageCircle aria-hidden="true" className="size-5" /> WhatsApp
           მხარდაჭერა

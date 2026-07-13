@@ -4,7 +4,7 @@ const steps = [
   {
     number: '01',
     title: 'ატვირთე ფოტოები',
-    description: 'გამოგზავნე ავტომობილის 5–15 რეალური ფოტო ტელეფონიდან.',
+    description: 'გამოგზავნე ავტომობილის 3–15 რეალური ფოტო ტელეფონიდან.',
     icon: ImagePlus,
   },
   {
@@ -17,7 +17,7 @@ const steps = [
     number: '03',
     title: 'მიიღე Preview',
     description:
-      'წყლის ნიშნით დაცულ Preview-ს WhatsApp-ზე მაქსიმუმ 24 საათში მიიღებ.',
+      'პირად გვერდზე watermark-ით დაცული Preview ავტომატურად გამოჩნდება.',
     icon: Clock4,
   },
 ] as const
@@ -44,8 +44,8 @@ export function HowItWorks() {
             </h2>
           </div>
           <p className="text-graphite/55 max-w-md text-base leading-8 lg:justify-self-end">
-            ანგარიშის შექმნა, ბარათი და რთული ინსტრუქციები არ გჭირდება.
-            გამოგზავნე მასალა — დანარჩენს რეალური AutoPost გუნდი აკეთებს.
+            ანგარიშის შექმნა და რთული ინსტრუქციები არ გჭირდება. გამოგზავნე
+            მასალა — AutoPost ფორმატებს ავტომატურად მოამზადებს.
           </p>
         </div>
 
