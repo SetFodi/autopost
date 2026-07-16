@@ -117,7 +117,7 @@ async function loadSubmissionList(filters: AdminDashboardFilters) {
   let query = supabase
     .from('submissions')
     .select(
-      'id, public_reference, phone, customer_name, vehicle_model, vehicle_year, price, price_currency, status, amount_paid, created_at',
+      'id, public_reference, phone, customer_name, seller_type, vehicle_model, vehicle_year, price, price_currency, status, amount_paid, created_at',
     )
     .eq('upload_state', 'complete')
     .order('created_at', { ascending: false })
@@ -125,6 +125,10 @@ async function loadSubmissionList(filters: AdminDashboardFilters) {
 
   if (filters.status !== 'all') {
     query = query.eq('status', filters.status)
+  }
+
+  if (filters.sellerType !== 'all') {
+    query = query.eq('seller_type', filters.sellerType)
   }
 
   const safeSearch = sanitizePostgrestSearch(filters.query)

@@ -61,7 +61,7 @@ function mockStorageFetch(header = validJpegBytes()) {
 }
 
 function fileDescriptors() {
-  return Array.from({ length: 5 }, (_, index) => ({
+  return Array.from({ length: 3 }, (_, index) => ({
     originalFilename: `car-${index + 1}.jpg`,
     mimeType: 'image/jpeg',
     fileSize: 1_000_000 + index,
@@ -83,6 +83,7 @@ function storageRows() {
 function initBody(website = '') {
   return {
     phone: '+995 555 12 34 56',
+    sellerType: 'dealer',
     customerName: 'ნინო',
     vehicleModel: 'BMW 330i',
     vehicleYear: 2022,
@@ -93,6 +94,11 @@ function initBody(website = '') {
     transmission: 'ავტომატიკა',
     location: 'თბილისი',
     additionalInfo: 'სერვისის ისტორია',
+    utmSource: 'facebook',
+    utmMedium: 'paid_social',
+    utmCampaign: 'validation-one',
+    utmContent: 'reel-a',
+    utmTerm: 'car-sale',
     consentGiven: true,
     website,
     files: fileDescriptors(),
@@ -319,7 +325,7 @@ describe('POST /api/submissions/init', () => {
       publicReference: PUBLIC_REFERENCE,
       completionToken: expect.stringMatching(/^v1:[a-f0-9]{64}$/),
     })
-    expect(body.uploads).toHaveLength(5)
+    expect(body.uploads).toHaveLength(3)
     expect(service.rpc).toHaveBeenCalledWith(
       'begin_submission',
       expect.objectContaining({
@@ -327,10 +333,16 @@ describe('POST /api/submissions/init', () => {
         p_price_currency: 'GEL',
         p_rate_limit: 3,
         p_request_rate_limit: 30,
+        p_seller_type: 'dealer',
         p_submission_id: expect.any(String),
+        p_utm_campaign: 'validation-one',
+        p_utm_content: 'reel-a',
+        p_utm_medium: 'paid_social',
+        p_utm_source: 'facebook',
+        p_utm_term: 'car-sale',
       }),
     )
-    expect(service.createSignedUploadUrl).toHaveBeenCalledTimes(5)
+    expect(service.createSignedUploadUrl).toHaveBeenCalledTimes(3)
   })
 
   it('rejects a filled honeypot before touching Supabase', async () => {
@@ -442,13 +454,13 @@ describe('POST /api/submissions/complete', () => {
     expect(await response.json()).toMatchObject({
       submissionId: SUBMISSION_ID,
       publicReference: PUBLIC_REFERENCE,
-      photoCount: 5,
+      photoCount: 3,
       generationStatus: 'generating_preview',
       resultUrl: expect.stringContaining('/result/'),
     })
-    expect(service.info).toHaveBeenCalledTimes(5)
-    expect(service.createSignedUrl).toHaveBeenCalledTimes(5)
-    expect(globalThis.fetch).toHaveBeenCalledTimes(5)
+    expect(service.info).toHaveBeenCalledTimes(3)
+    expect(service.createSignedUrl).toHaveBeenCalledTimes(3)
+    expect(globalThis.fetch).toHaveBeenCalledTimes(3)
     expect(globalThis.fetch).toHaveBeenCalledWith(
       expect.stringContaining('https://storage.example.test/'),
       expect.objectContaining({
@@ -456,7 +468,7 @@ describe('POST /api/submissions/complete', () => {
         headers: { Range: `bytes=0-${IMAGE_VALIDATION_PREFIX_BYTES - 1}` },
       }),
     )
-    expect(streamCancelMocks).toHaveLength(5)
+    expect(streamCancelMocks).toHaveLength(3)
     expect(
       streamCancelMocks.every((cancel) => cancel.mock.calls.length === 1),
     ).toBe(true)

@@ -13,6 +13,10 @@ export const VEHICLE_PRICE_CURRENCIES = ['GEL', 'USD'] as const
 
 export type VehiclePriceCurrency = (typeof VEHICLE_PRICE_CURRENCIES)[number]
 
+export const SELLER_TYPES = ['private_seller', 'dealer'] as const
+
+export type SellerType = (typeof SELLER_TYPES)[number]
+
 export const ALLOWED_IMAGE_MIME_TYPES = [
   'image/jpeg',
   'image/png',
@@ -75,6 +79,9 @@ export const submissionFileMetadataSchema = z
 export const submissionInitSchema = z
   .object({
     phone: georgianPhoneSchema,
+    sellerType: z.enum(SELLER_TYPES, {
+      error: 'აირჩიეთ, პირადი გამყიდველი ხართ თუ ავტოდილერი.',
+    }),
     customerName: optionalText('სახელი', 100),
     vehicleModel: requiredText('ავტომობილის მარკა და მოდელი', 120).min(
       2,
@@ -97,6 +104,11 @@ export const submissionInitSchema = z
     transmission: optionalText('ტრანსმისია', 80),
     location: optionalText('მდებარეობა', 120),
     additionalInfo: optionalText('დამატებითი ინფორმაცია', 2000),
+    utmSource: optionalText('UTM source', 200),
+    utmMedium: optionalText('UTM medium', 200),
+    utmCampaign: optionalText('UTM campaign', 200),
+    utmContent: optionalText('UTM content', 200),
+    utmTerm: optionalText('UTM term', 200),
     consentGiven: z.literal(true, {
       error: 'გასაგრძელებლად საჭიროა თანხმობა.',
     }),

@@ -2,7 +2,7 @@ begin;
 
 create extension if not exists pgtap with schema extensions;
 
-select plan(36);
+select plan(53);
 
 select has_table(
   'public',
@@ -15,6 +15,48 @@ select has_column(
   'submissions',
   'price_currency',
   'submissions record the explicit vehicle price currency'
+);
+
+select has_column(
+  'public',
+  'submissions',
+  'seller_type',
+  'submissions record campaign seller segmentation'
+);
+
+select has_column(
+  'public',
+  'submissions',
+  'utm_source',
+  'submissions record UTM source'
+);
+
+select has_column(
+  'public',
+  'submissions',
+  'utm_medium',
+  'submissions record UTM medium'
+);
+
+select has_column(
+  'public',
+  'submissions',
+  'utm_campaign',
+  'submissions record UTM campaign'
+);
+
+select has_column(
+  'public',
+  'submissions',
+  'utm_content',
+  'submissions record UTM content'
+);
+
+select has_column(
+  'public',
+  'submissions',
+  'utm_term',
+  'submissions record UTM term'
 );
 
 select has_table(
@@ -74,10 +116,11 @@ select has_function(
   'begin_submission',
   array[
     'uuid', 'text', 'text', 'text', 'integer', 'integer', 'integer', 'text',
-    'text', 'text', 'smallint', 'numeric', 'text', 'integer', 'text', 'text',
-    'text', 'text', 'boolean', 'jsonb'
+    'text', 'text', 'text', 'smallint', 'numeric', 'text', 'integer', 'text',
+    'text', 'text', 'text', 'text', 'text', 'text', 'text', 'text', 'boolean',
+    'jsonb'
   ],
-  'the canonical intake function requires an explicit currency'
+  'the canonical intake function requires seller segmentation and attribution'
 );
 
 select is(
@@ -167,7 +210,7 @@ select ok(
   not exists (
     select 1
     from unnest(array[
-      'public.begin_submission(uuid,text,text,text,integer,integer,integer,text,text,text,smallint,numeric,text,integer,text,text,text,text,boolean,jsonb)',
+      'public.begin_submission(uuid,text,text,text,integer,integer,integer,text,text,text,text,smallint,numeric,text,integer,text,text,text,text,text,text,text,text,text,boolean,jsonb)',
       'public.complete_submission(uuid,jsonb)',
       'public.claim_stale_submissions(timestamptz,integer)',
       'public.delete_claimed_submission(uuid,uuid)',
@@ -187,7 +230,7 @@ select ok(
   not exists (
     select 1
     from unnest(array[
-      'public.begin_submission(uuid,text,text,text,integer,integer,integer,text,text,text,smallint,numeric,text,integer,text,text,text,text,boolean,jsonb)',
+      'public.begin_submission(uuid,text,text,text,integer,integer,integer,text,text,text,text,smallint,numeric,text,integer,text,text,text,text,text,text,text,text,text,boolean,jsonb)',
       'public.complete_submission(uuid,jsonb)',
       'public.claim_stale_submissions(timestamptz,integer)',
       'public.delete_claimed_submission(uuid,uuid)',
@@ -289,10 +332,16 @@ select cmp_ok(
 
 insert into public.submissions (
   phone,
+  seller_type,
   vehicle_model,
   vehicle_year,
   price,
   price_currency,
+  utm_source,
+  utm_medium,
+  utm_campaign,
+  utm_content,
+  utm_term,
   status,
   upload_state,
   expected_file_count,
@@ -303,17 +352,43 @@ insert into public.submissions (
 )
 values (
   '+995555123456',
+  'dealer',
   'AutoPost lifecycle test',
   2021,
   24900,
   'GEL',
+  'facebook',
+  'paid_social',
+  'campaign-validation',
+  'feed-a',
+  'cars',
   'new',
   'complete',
-  5,
+  3,
   true,
   'v1:' || repeat('b', 64),
   'v1:' || repeat('c', 64),
   now()
+);
+
+select throws_like(
+  $$
+    update public.submissions
+    set seller_type = 'broker'
+    where idempotency_key_hash = 'v1:' || repeat('b', 64)
+  $$,
+  '%submissions_seller_type_check%',
+  'seller type is limited to the agreed campaign segments'
+);
+
+select throws_like(
+  $$
+    update public.submissions
+    set utm_source = repeat('x', 201)
+    where idempotency_key_hash = 'v1:' || repeat('b', 64)
+  $$,
+  '%submissions_utm_source_length_check%',
+  'UTM values are bounded at the database boundary'
 );
 
 select throws_like(
@@ -334,6 +409,18 @@ select throws_like(
   $$,
   '%submissions_price_currency_check%',
   'vehicle price currency is limited to GEL and USD'
+);
+
+select throws_like(
+  $$
+    update public.submissions
+    set status = 'converted',
+        delivery_url = 'https://example.com/autopost-preview',
+        amount_paid = 14.90
+    where idempotency_key_hash = 'v1:' || repeat('b', 64)
+  $$,
+  '%submissions_conversion_delivery_check%',
+  'conversion cannot skip the delivered lifecycle state'
 );
 
 update public.submissions
@@ -363,6 +450,24 @@ select is(
   ),
   1,
   'delivered status records exactly one lifecycle event'
+);
+
+select ok(
+  (
+    select metadata @> jsonb_build_object(
+      'seller_type', 'dealer',
+      'utm_source', 'facebook',
+      'utm_campaign', 'campaign-validation'
+    )
+    from public.analytics_events
+    where event_name = 'preview_delivered'
+      and submission_id = (
+        select id
+        from public.submissions
+        where idempotency_key_hash = 'v1:' || repeat('b', 64)
+      )
+  ),
+  'delivered analytics retain seller and campaign attribution'
 );
 
 update public.submissions
@@ -421,6 +526,239 @@ select is(
   ),
   1,
   'converted status records exactly one lifecycle event'
+);
+
+select ok(
+  (
+    select metadata @> jsonb_build_object(
+      'seller_type', 'dealer',
+      'utm_medium', 'paid_social',
+      'utm_content', 'feed-a'
+    )
+    from public.analytics_events
+    where event_name = 'converted'
+      and submission_id = (
+        select id
+        from public.submissions
+        where idempotency_key_hash = 'v1:' || repeat('b', 64)
+      )
+  ),
+  'converted analytics retain seller and campaign attribution'
+);
+
+insert into public.submissions (
+  id,
+  phone,
+  seller_type,
+  vehicle_model,
+  vehicle_year,
+  price,
+  price_currency,
+  utm_source,
+  utm_medium,
+  utm_campaign,
+  expected_file_count,
+  consent_given,
+  idempotency_key_hash,
+  request_fingerprint
+)
+values (
+  '80000000-0000-4000-8000-000000000001',
+  '+995555800001',
+  'private_seller',
+  'Three photo completion test',
+  2024,
+  15000,
+  'GEL',
+  'instagram',
+  'paid_social',
+  'campaign-validation',
+  3,
+  true,
+  'v1:' || repeat('d', 64),
+  'v1:' || repeat('e', 64)
+);
+
+insert into public.submission_files (
+  submission_id,
+  storage_path,
+  original_filename,
+  mime_type,
+  file_size,
+  sort_order
+)
+values
+  (
+    '80000000-0000-4000-8000-000000000001',
+    'submissions/80000000-0000-4000-8000-000000000001/11111111-1111-4111-8111-111111111111.jpg',
+    'one.jpg',
+    'image/jpeg',
+    123,
+    0
+  ),
+  (
+    '80000000-0000-4000-8000-000000000001',
+    'submissions/80000000-0000-4000-8000-000000000001/22222222-2222-4222-8222-222222222222.jpg',
+    'two.jpg',
+    'image/jpeg',
+    123,
+    1
+  ),
+  (
+    '80000000-0000-4000-8000-000000000001',
+    'submissions/80000000-0000-4000-8000-000000000001/33333333-3333-4333-8333-333333333333.jpg',
+    'three.jpg',
+    'image/jpeg',
+    123,
+    2
+  );
+
+select lives_ok(
+  $$
+    select *
+    from public.complete_submission(
+      '80000000-0000-4000-8000-000000000001',
+      jsonb_build_array(
+        jsonb_build_object(
+          'path',
+          'submissions/80000000-0000-4000-8000-000000000001/11111111-1111-4111-8111-111111111111.jpg',
+          'fileSize',
+          123,
+          'mimeType',
+          'image/jpeg'
+        ),
+        jsonb_build_object(
+          'path',
+          'submissions/80000000-0000-4000-8000-000000000001/22222222-2222-4222-8222-222222222222.jpg',
+          'fileSize',
+          123,
+          'mimeType',
+          'image/jpeg'
+        ),
+        jsonb_build_object(
+          'path',
+          'submissions/80000000-0000-4000-8000-000000000001/33333333-3333-4333-8333-333333333333.jpg',
+          'fileSize',
+          123,
+          'mimeType',
+          'image/jpeg'
+        )
+      )
+    )
+  $$,
+  'a three-photo submission can complete atomically'
+);
+
+select ok(
+  (
+    select metadata @> jsonb_build_object(
+      'photo_count', 3,
+      'seller_type', 'private_seller',
+      'utm_source', 'instagram',
+      'utm_campaign', 'campaign-validation'
+    )
+    from public.analytics_events
+    where submission_id = '80000000-0000-4000-8000-000000000001'
+      and event_name = 'submission_completed'
+  ),
+  'completion analytics retain the three-photo count and campaign attribution'
+);
+
+insert into public.submissions (
+  id,
+  phone,
+  seller_type,
+  vehicle_model,
+  vehicle_year,
+  price,
+  price_currency,
+  status,
+  upload_state,
+  expected_file_count,
+  consent_given,
+  idempotency_key_hash,
+  request_fingerprint,
+  completed_at
+)
+values (
+  '80000000-0000-4000-8000-000000000002',
+  '+995555800002',
+  'dealer',
+  'TBC delivery transition test',
+  2025,
+  32000,
+  'GEL',
+  'preview_ready',
+  'complete',
+  3,
+  true,
+  'v1:' || repeat('f', 64),
+  'v1:' || repeat('0', 64),
+  now()
+);
+
+insert into public.fulfillments (submission_id)
+values ('80000000-0000-4000-8000-000000000002');
+
+insert into public.payments (
+  submission_id,
+  merchant_payment_id,
+  provider_payment_id,
+  amount,
+  currency
+)
+values (
+  '80000000-0000-4000-8000-000000000002',
+  'APABCDEF1234-ABCDEF123456',
+  'pay-campaign-001',
+  14.90,
+  'GEL'
+);
+
+select lives_ok(
+  $$
+    select *
+    from public.confirm_tbc_payment(
+      'pay-campaign-001',
+      'Succeeded',
+      14.90,
+      'GEL',
+      'Approved',
+      '{"status":"Succeeded"}'::jsonb,
+      'https://autopost.test/result/80000000-0000-4000-8000-000000000002'
+    )
+  $$,
+  'a verified TBC success records delivery before conversion'
+);
+
+select is(
+  (
+    select status
+    from public.submissions
+    where id = '80000000-0000-4000-8000-000000000002'
+  ),
+  'converted',
+  'the verified TBC payment leaves the submission converted'
+);
+
+select ok(
+  (
+    select delivered_at is not null and converted_at is not null
+    from public.submissions
+    where id = '80000000-0000-4000-8000-000000000002'
+  ),
+  'the verified TBC transition records both lifecycle timestamps'
+);
+
+select is(
+  (
+    select count(*)::integer
+    from public.analytics_events
+    where submission_id = '80000000-0000-4000-8000-000000000002'
+      and event_name in ('preview_delivered', 'converted')
+  ),
+  2,
+  'the verified TBC transition records delivery and conversion analytics'
 );
 
 select * from finish();

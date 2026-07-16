@@ -21,7 +21,7 @@ describe('Meta Pixel utility', () => {
     delete process.env.NEXT_PUBLIC_META_PIXEL_ID
   })
 
-  it('initializes the Pixel once and records every requested PageView', () => {
+  it('initializes the Pixel once and tracks each logical PageView', () => {
     expect(initializeMetaPixel()).toBe(true)
     expect(initializeMetaPixel()).toBe(true)
     expect(trackMetaPageView()).toBe(true)
@@ -30,10 +30,11 @@ describe('Meta Pixel utility', () => {
     const pageViews = window.fbq?.queue.filter(
       (call) => call[0] === 'track' && call[1] === 'PageView',
     )
-    expect(pageViews).toHaveLength(2)
-    expect(window.fbq?.queue.filter((call) => call[0] === 'init')).toHaveLength(
-      1,
+    const initializations = window.fbq?.queue.filter(
+      (call) => call[0] === 'init',
     )
+    expect(pageViews).toHaveLength(2)
+    expect(initializations).toHaveLength(1)
     expect(document.querySelectorAll('#autopost-meta-pixel')).toHaveLength(1)
   })
 
@@ -50,6 +51,19 @@ describe('Meta Pixel utility', () => {
       (call) => call[0] === 'track' && call[1] === 'Lead',
     )
     expect(leads).toHaveLength(1)
+  })
+
+  it('adds seller type to Lead custom data when available', () => {
+    expect(trackMetaLeadOnce('AP-SELLER-TYPE', 'dealer')).toBe(true)
+    expect(window.fbq?.queue).toContainEqual([
+      'track',
+      'Lead',
+      {
+        content_category: 'vehicle_preview',
+        content_name: 'AutoPost for Cars',
+        seller_type: 'dealer',
+      },
+    ])
   })
 
   it('is inert when no Pixel ID is configured', () => {

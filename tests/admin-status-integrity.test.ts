@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 
 import {
+  DELIVERED_STATUS_REQUIRED_MESSAGE,
   DELIVERY_URL_REQUIRED_MESSAGE,
   getStatusPrerequisiteIssue,
   POSITIVE_PAYMENT_REQUIRED_MESSAGE,
@@ -39,6 +40,15 @@ describe('admin status-transition prerequisites', () => {
         'converted',
         'https://drive.example.test/delivery',
         14.9,
+        'preview_ready',
+      ),
+    ).toBe(DELIVERED_STATUS_REQUIRED_MESSAGE)
+    expect(
+      getStatusPrerequisiteIssue(
+        'converted',
+        'https://drive.example.test/delivery',
+        14.9,
+        'delivered',
       ),
     ).toBeNull()
   })

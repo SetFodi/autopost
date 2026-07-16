@@ -18,6 +18,8 @@ export type SubmissionUploadState = 'pending' | 'complete' | 'failed'
 
 export type VehiclePriceCurrency = 'GEL' | 'USD'
 
+export type SellerType = 'private_seller' | 'dealer'
+
 export type FulfillmentStatus =
   | 'queued'
   | 'generating_preview'
@@ -378,10 +380,16 @@ export type Database = {
           price_currency: VehiclePriceCurrency
           public_reference: string
           request_fingerprint: string
+          seller_type: SellerType | null
           status: SubmissionStatus
           transmission: string | null
           updated_at: string
           upload_state: SubmissionUploadState
+          utm_campaign: string | null
+          utm_content: string | null
+          utm_medium: string | null
+          utm_source: string | null
+          utm_term: string | null
           vehicle_model: string
           vehicle_year: number
         }
@@ -409,10 +417,16 @@ export type Database = {
           price_currency: VehiclePriceCurrency
           public_reference?: string
           request_fingerprint: string
+          seller_type?: SellerType | null
           status?: SubmissionStatus
           transmission?: string | null
           updated_at?: string
           upload_state?: SubmissionUploadState
+          utm_campaign?: string | null
+          utm_content?: string | null
+          utm_medium?: string | null
+          utm_source?: string | null
+          utm_term?: string | null
           vehicle_model: string
           vehicle_year: number
         }
@@ -440,10 +454,16 @@ export type Database = {
           price_currency?: VehiclePriceCurrency
           public_reference?: string
           request_fingerprint?: string
+          seller_type?: SellerType | null
           status?: SubmissionStatus
           transmission?: string | null
           updated_at?: string
           upload_state?: SubmissionUploadState
+          utm_campaign?: string | null
+          utm_content?: string | null
+          utm_medium?: string | null
+          utm_source?: string | null
+          utm_term?: string | null
           vehicle_model?: string
           vehicle_year?: number
         }
@@ -469,8 +489,14 @@ export type Database = {
           p_rate_limit: number
           p_request_rate_limit: number
           p_request_fingerprint: string
+          p_seller_type: SellerType
           p_submission_id: string
           p_transmission: string | null
+          p_utm_campaign: string | null
+          p_utm_content: string | null
+          p_utm_medium: string | null
+          p_utm_source: string | null
+          p_utm_term: string | null
           p_vehicle_model: string
           p_vehicle_year: number
           p_window_seconds: number

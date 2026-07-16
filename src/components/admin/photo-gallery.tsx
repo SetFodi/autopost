@@ -35,7 +35,7 @@ export function PhotoGallery({ photos }: { photos: AdminSubmissionPhoto[] }) {
               href={photo.signed_url}
               target="_blank"
               rel="noreferrer"
-              className="relative block aspect-[4/3] overflow-hidden bg-stone-900 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-orange-400"
+              className="relative block aspect-[4/3] overflow-hidden bg-stone-950 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-orange-400"
               aria-label={`ფოტო ${index + 1}-ის სრულ ზომაში გახსნა`}
             >
               <img
@@ -43,7 +43,7 @@ export function PhotoGallery({ photos }: { photos: AdminSubmissionPhoto[] }) {
                 alt={`${index + 1}. ${photo.original_filename}`}
                 loading={index < 4 ? 'eager' : 'lazy'}
                 decoding="async"
-                className="size-full object-cover transition duration-300 group-hover:scale-[1.025]"
+                className="size-full object-contain transition duration-300 group-hover:scale-[1.015]"
               />
               <span className="absolute top-2 right-2 grid size-8 place-items-center rounded-lg border border-white/15 bg-black/65 text-white opacity-0 backdrop-blur-sm transition group-focus-within:opacity-100 group-hover:opacity-100">
                 <ExternalLink aria-hidden="true" className="size-3.5" />

@@ -46,7 +46,15 @@ export function SubmissionEditor({ submission }: SubmissionEditorProps) {
             className="min-h-12 w-full rounded-xl border border-white/10 bg-[#111212] px-4 text-sm text-stone-100 outline-none focus:border-orange-400/60 focus:ring-4 focus:ring-orange-400/10"
           >
             {SUBMISSION_STATUSES.map((status) => (
-              <option key={status} value={status}>
+              <option
+                key={status}
+                value={status}
+                disabled={
+                  status === 'converted' &&
+                  submission.status !== 'delivered' &&
+                  submission.status !== 'converted'
+                }
+              >
                 {STATUS_DETAILS[status].label} —{' '}
                 {STATUS_DETAILS[status].description}
               </option>

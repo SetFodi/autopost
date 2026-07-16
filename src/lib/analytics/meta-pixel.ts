@@ -18,6 +18,8 @@ const SCRIPT_ID = 'autopost-meta-pixel'
 const LEAD_STORAGE_PREFIX = 'autopost:meta-lead:'
 const fallbackLeadReferences = new Set<string>()
 
+export type MetaSellerType = 'private_seller' | 'dealer'
+
 function getPixelId(): string | null {
   return process.env.NEXT_PUBLIC_META_PIXEL_ID?.trim() || null
 }
@@ -111,7 +113,10 @@ function rememberLead(publicReference: string) {
  * Records Lead only after /complete succeeds. Persistent reference-based
  * deduplication prevents a success-screen refresh from firing it again.
  */
-export function trackMetaLeadOnce(publicReference: string): boolean {
+export function trackMetaLeadOnce(
+  publicReference: string,
+  sellerType?: MetaSellerType,
+): boolean {
   if (!publicReference || hasRecordedLead(publicReference)) return false
 
   const fbq = getInitializedPixel()
@@ -120,6 +125,7 @@ export function trackMetaLeadOnce(publicReference: string): boolean {
   fbq('track', 'Lead', {
     content_category: 'vehicle_preview',
     content_name: 'AutoPost for Cars',
+    ...(sellerType ? { seller_type: sellerType } : {}),
   })
   rememberLead(publicReference)
   return true

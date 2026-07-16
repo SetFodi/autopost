@@ -25,6 +25,7 @@ function files(
 function validPayload() {
   return {
     phone: '+995 (555) 12-34-56',
+    sellerType: 'dealer',
     customerName: 'ნინო',
     vehicleModel: 'Mercedes-Benz GLE 450 4MATIC',
     vehicleYear: '2022',
@@ -37,6 +38,11 @@ function validPayload() {
     additionalInfo: 'სერვისის სრული ისტორია.',
     consentGiven: true,
     website: '',
+    utmSource: 'facebook',
+    utmMedium: 'paid_social',
+    utmCampaign: 'first-validation',
+    utmContent: 'reel-a',
+    utmTerm: 'cars',
     files: files(3),
   }
 }
@@ -49,6 +55,8 @@ describe('submissionInitSchema', () => {
     expect(result.price).toBe(42_500)
     expect(result.priceCurrency).toBe('USD')
     expect(result.mileage).toBe(38_000)
+    expect(result.sellerType).toBe('dealer')
+    expect(result.utmSource).toBe('facebook')
     expect(result.files).toHaveLength(3)
   })
 
@@ -66,6 +74,33 @@ describe('submissionInitSchema', () => {
     const payload = validPayload()
     payload.vehicleModel = ''
     expect(submissionInitSchema.safeParse(payload).success).toBe(false)
+  })
+
+  it('requires a supported seller type', () => {
+    const missing = { ...validPayload(), sellerType: undefined }
+    expect(publicSubmissionFormSchema.safeParse(missing).success).toBe(false)
+    expect(submissionInitSchema.safeParse(missing).success).toBe(false)
+
+    const invalid = { ...validPayload(), sellerType: 'broker' }
+    expect(publicSubmissionFormSchema.safeParse(invalid).success).toBe(false)
+    expect(submissionInitSchema.safeParse(invalid).success).toBe(false)
+  })
+
+  it('accepts bounded optional UTM attribution', () => {
+    expect(submissionInitSchema.parse(validPayload())).toMatchObject({
+      utmSource: 'facebook',
+      utmMedium: 'paid_social',
+      utmCampaign: 'first-validation',
+      utmContent: 'reel-a',
+      utmTerm: 'cars',
+    })
+
+    expect(
+      submissionInitSchema.safeParse({
+        ...validPayload(),
+        utmCampaign: 'x'.repeat(201),
+      }).success,
+    ).toBe(false)
   })
 
   it('requires consent', () => {
@@ -86,7 +121,7 @@ describe('submissionInitSchema', () => {
   it('rejects an unsupported MIME type', () => {
     const payload = {
       ...validPayload(),
-      files: files(5, { mimeType: 'application/pdf' }),
+      files: files(3, { mimeType: 'application/pdf' }),
     }
     expect(submissionInitSchema.safeParse(payload).success).toBe(false)
   })
@@ -94,7 +129,7 @@ describe('submissionInitSchema', () => {
   it('rejects an oversized individual file', () => {
     const payload = {
       ...validPayload(),
-      files: files(5, { fileSize: MAX_FILE_SIZE_BYTES + 1 }),
+      files: files(3, { fileSize: MAX_FILE_SIZE_BYTES + 1 }),
     }
     expect(submissionInitSchema.safeParse(payload).success).toBe(false)
   })
@@ -108,8 +143,8 @@ describe('submissionInitSchema', () => {
   })
 
   it('rejects duplicate sort positions', () => {
-    const duplicateOrder = files(5)
-    duplicateOrder[4]!.sortOrder = 3
+    const duplicateOrder = files(3)
+    duplicateOrder[2]!.sortOrder = 1
     const payload = { ...validPayload(), files: duplicateOrder }
     expect(submissionInitSchema.safeParse(payload).success).toBe(false)
   })

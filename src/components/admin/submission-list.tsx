@@ -8,10 +8,11 @@ import {
 } from 'lucide-react'
 
 import { StatusBadge } from '@/components/admin/status-badge'
-import { STATUS_DETAILS } from '@/lib/admin/constants'
+import { SELLER_TYPE_LABELS, STATUS_DETAILS } from '@/lib/admin/constants'
 import { formatAdminDate, formatVehiclePrice } from '@/lib/admin/format'
 import {
   SUBMISSION_STATUSES,
+  SELLER_TYPES,
   type AdminDashboardFilters,
   type AdminSubmissionListItem,
 } from '@/lib/admin/types'
@@ -27,7 +28,10 @@ export function SubmissionList({
   filters,
   resultLimit,
 }: SubmissionListProps) {
-  const isFiltered = Boolean(filters.query) || filters.status !== 'all'
+  const isFiltered =
+    Boolean(filters.query) ||
+    filters.status !== 'all' ||
+    filters.sellerType !== 'all'
 
   return (
     <section
@@ -55,7 +59,7 @@ export function SubmissionList({
             action="/admin"
             method="get"
             role="search"
-            className="grid gap-2 sm:grid-cols-[minmax(220px,1fr)_190px_auto]"
+            className="grid gap-2 md:grid-cols-2 xl:grid-cols-[minmax(220px,1fr)_190px_190px_auto]"
           >
             <label className="relative block">
               <span className="sr-only">
@@ -90,6 +94,26 @@ export function SubmissionList({
                 {SUBMISSION_STATUSES.map((status) => (
                   <option key={status} value={status}>
                     {STATUS_DETAILS[status].label}
+                  </option>
+                ))}
+              </select>
+            </label>
+
+            <label className="relative block">
+              <span className="sr-only">გამყიდველის ტიპის ფილტრი</span>
+              <CarFront
+                aria-hidden="true"
+                className="pointer-events-none absolute top-1/2 left-3.5 size-4 -translate-y-1/2 text-stone-500"
+              />
+              <select
+                name="sellerType"
+                defaultValue={filters.sellerType}
+                className="min-h-11 w-full appearance-none rounded-xl border border-white/10 bg-[#111212] pr-8 pl-10 text-sm text-stone-200 outline-none focus:border-orange-400/60 focus:ring-4 focus:ring-orange-400/10"
+              >
+                <option value="all">ყველა გამყიდველი</option>
+                {SELLER_TYPES.map((sellerType) => (
+                  <option key={sellerType} value={sellerType}>
+                    {SELLER_TYPE_LABELS[sellerType]}
                   </option>
                 ))}
               </select>
@@ -177,6 +201,11 @@ export function SubmissionList({
                         {submission.public_reference} ·{' '}
                         {submission.vehicle_year}
                       </p>
+                      <p className="mt-1 text-[11px] font-semibold text-stone-600">
+                        {submission.seller_type
+                          ? SELLER_TYPE_LABELS[submission.seller_type]
+                          : 'გამყიდველი არ არის მითითებული'}
+                      </p>
                     </td>
                     <td className="px-4 py-4 align-middle">
                       <p className="font-mono text-sm text-stone-300">
@@ -247,6 +276,16 @@ export function SubmissionList({
                         submission.price,
                         submission.price_currency,
                       )}
+                    </dd>
+                  </div>
+                  <div className="col-span-2">
+                    <dt className="text-[11px] font-semibold text-stone-600">
+                      გამყიდველი
+                    </dt>
+                    <dd className="mt-1 text-xs text-stone-400">
+                      {submission.seller_type
+                        ? SELLER_TYPE_LABELS[submission.seller_type]
+                        : 'არ არის მითითებული'}
                     </dd>
                   </div>
                   <div className="col-span-2">

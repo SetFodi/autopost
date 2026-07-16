@@ -150,7 +150,7 @@ export function PhotoDropzone({
               key={photo.id}
               className="border-graphite/14 relative overflow-hidden border bg-[#d8d9d1]"
             >
-              <div className="relative aspect-[4/3] overflow-hidden">
+              <div className="relative aspect-[4/3] overflow-hidden bg-[#c9cbc3]">
                 {photo.previewUrl ? (
                   <Image
                     src={photo.previewUrl}
@@ -158,7 +158,7 @@ export function PhotoDropzone({
                     fill
                     unoptimized
                     sizes="(max-width: 640px) 45vw, 180px"
-                    className="object-cover"
+                    className="object-contain"
                   />
                 ) : (
                   <div className="text-graphite/65 grid h-full place-items-center">

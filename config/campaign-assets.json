@@ -1,0 +1,109 @@
+{
+  "assetSet": "real",
+  "vehicle": {
+    "model": "",
+    "specs": "",
+    "price": ""
+  },
+  "originals": [
+    {
+      "src": "/campaign/originals/01.jpg",
+      "alt": "",
+      "fileLabel": "01.jpg",
+      "objectPosition": "object-center"
+    },
+    {
+      "src": "/campaign/originals/02.jpg",
+      "alt": "",
+      "fileLabel": "02.jpg",
+      "objectPosition": "object-center"
+    },
+    {
+      "src": "/campaign/originals/03.jpg",
+      "alt": "",
+      "fileLabel": "03.jpg",
+      "objectPosition": "object-center"
+    }
+  ],
+  "final": {
+    "heroAfter": {
+      "src": "/campaign/final/hero-after.jpg",
+      "alt": "",
+      "objectPosition": "object-center"
+    },
+    "reel": {
+      "src": "/campaign/final/reel.mp4",
+      "poster": "/campaign/final/reel-poster.jpg",
+      "alt": "",
+      "objectPosition": "object-center"
+    },
+    "stories": [
+      {
+        "src": "/campaign/final/stories/01.jpg",
+        "alt": "",
+        "objectPosition": "object-center"
+      },
+      {
+        "src": "/campaign/final/stories/02.jpg",
+        "alt": "",
+        "objectPosition": "object-center"
+      },
+      {
+        "src": "/campaign/final/stories/03.jpg",
+        "alt": "",
+        "objectPosition": "object-center"
+      }
+    ],
+    "carousel": [
+      {
+        "src": "/campaign/final/carousel/01.jpg",
+        "alt": "",
+        "objectPosition": "object-center"
+      },
+      {
+        "src": "/campaign/final/carousel/02.jpg",
+        "alt": "",
+        "objectPosition": "object-center"
+      },
+      {
+        "src": "/campaign/final/carousel/03.jpg",
+        "alt": "",
+        "objectPosition": "object-center"
+      },
+      {
+        "src": "/campaign/final/carousel/04.jpg",
+        "alt": "",
+        "objectPosition": "object-center"
+      },
+      {
+        "src": "/campaign/final/carousel/05.jpg",
+        "alt": "",
+        "objectPosition": "object-center"
+      },
+      {
+        "src": "/campaign/final/carousel/06.jpg",
+        "alt": "",
+        "objectPosition": "object-center"
+      }
+    ],
+    "marketplaceCard": {
+      "src": "/campaign/final/marketplace-card.jpg",
+      "alt": "",
+      "objectPosition": "object-center"
+    }
+  },
+  "salesCopy": [
+    {
+      "lang": "KA",
+      "text": ""
+    },
+    {
+      "lang": "EN",
+      "text": ""
+    },
+    {
+      "lang": "RU",
+      "text": ""
+    }
+  ]
+}

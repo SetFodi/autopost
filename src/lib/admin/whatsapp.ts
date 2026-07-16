@@ -23,7 +23,7 @@ export function buildDeliveryMessage(
   const model = vehicleModel.trim() || 'ავტომობილი'
   const link = deliveryUrl.trim() || '[Drive link]'
 
-  return `გამარჯობა! თქვენი ${model}-ს Preview მზადაა 👇 ${link}\n\nთუ მოგეწონებათ, სრულ პაკეტს watermark-ის გარეშე გამოგიგზავნით — ფასი 14.90₾.\n\nკითხვები თუ გაქვთ, აქვე მომწერეთ.`
+  return `გამარჯობა! თქვენი ${model}-ს Preview მზადაა 👇\n${link}\n\nთუ მოგეწონებათ, სრულ პაკეტს watermark-ის გარეშე გამოგიგზავნით — ფასი 14.90₾.\n\nკითხვები თუ გაქვთ, აქვე მომწერეთ.`
 }
 
 export function buildWhatsAppUrl(phone: string, message: string) {

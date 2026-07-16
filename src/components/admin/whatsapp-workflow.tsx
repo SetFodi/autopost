@@ -1,6 +1,6 @@
 'use client'
 
-import { useActionState, useState } from 'react'
+import { useActionState, useEffect, useRef, useState } from 'react'
 import {
   Check,
   Clipboard,
@@ -56,6 +56,9 @@ export function WhatsAppWorkflow({
   initialDeliveryUrl,
 }: WhatsAppWorkflowProps) {
   const [deliveryUrl, setDeliveryUrl] = useState(initialDeliveryUrl)
+  const [savedDeliveryUrl, setSavedDeliveryUrl] = useState(
+    initialDeliveryUrl.trim(),
+  )
   const [message, setMessage] = useState(() =>
     buildDeliveryMessage(vehicleModel, initialDeliveryUrl),
   )
@@ -64,11 +67,20 @@ export function WhatsAppWorkflow({
     saveDeliveryUrlAction,
     INITIAL_STATE,
   )
+  const pendingSaveUrlRef = useRef(initialDeliveryUrl.trim())
   const phoneIsValid = isNormalizedGeorgianMobile(phone)
   const deliveryUrlIsValid = isValidDeliveryUrl(deliveryUrl)
+  const deliveryUrlIsSaved = deliveryUrl.trim() === savedDeliveryUrl
   const whatsAppUrl = buildWhatsAppUrl(phone, message)
-  const finalMessageIsReady = deliveryUrlIsValid && Boolean(message.trim())
+  const finalMessageIsReady =
+    deliveryUrlIsValid && deliveryUrlIsSaved && Boolean(message.trim())
   const canOpenWhatsApp = Boolean(whatsAppUrl && finalMessageIsReady)
+
+  useEffect(() => {
+    if (saveState.kind === 'success') {
+      setSavedDeliveryUrl(pendingSaveUrlRef.current)
+    }
+  }, [saveState])
 
   function handleDeliveryUrlChange(nextValue: string) {
     const previousLink = deliveryUrl.trim() || '[Drive link]'
@@ -93,7 +105,13 @@ export function WhatsAppWorkflow({
 
   return (
     <div className="space-y-5">
-      <form action={saveAction} className="space-y-2">
+      <form
+        action={saveAction}
+        className="space-y-2"
+        onSubmit={() => {
+          pendingSaveUrlRef.current = deliveryUrl.trim()
+        }}
+      >
         <input type="hidden" name="id" value={submissionId} />
         <label
           htmlFor="delivery-url"
@@ -186,6 +204,14 @@ export function WhatsAppWorkflow({
             className="mt-0.5 size-4 shrink-0 text-orange-400"
           />
           WhatsApp-ის გახსნამდე ჩასვით და შეინახეთ მიწოდების ბმული.
+        </div>
+      ) : !deliveryUrlIsSaved ? (
+        <div className="flex gap-3 rounded-xl border border-white/10 bg-white/[0.025] p-3 text-sm text-stone-400">
+          <TriangleAlert
+            aria-hidden="true"
+            className="mt-0.5 size-4 shrink-0 text-orange-400"
+          />
+          ბმული შეცვლილია — WhatsApp-ის გახსნამდე შეინახეთ.
         </div>
       ) : !message.trim() ? (
         <div className="flex gap-3 rounded-xl border border-white/10 bg-white/[0.025] p-3 text-sm text-stone-400">

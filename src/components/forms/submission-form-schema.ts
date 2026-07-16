@@ -4,7 +4,10 @@ import {
   GEORGIAN_PHONE_ERROR,
   isValidGeorgianPhone,
 } from '@/lib/validation/phone'
-import { VEHICLE_PRICE_CURRENCIES } from '@/lib/validation/submission'
+import {
+  SELLER_TYPES,
+  VEHICLE_PRICE_CURRENCIES,
+} from '@/lib/validation/submission'
 
 const currentYear = new Date().getFullYear()
 const formattedPositiveNumber = /^\d[\d\s,]*(?:\.\d{1,2})?$/
@@ -14,6 +17,9 @@ const optionalText = (max: number) =>
   z.string().trim().max(max, `მაქსიმუმ ${max} სიმბოლო.`).optional()
 
 export const publicSubmissionFormSchema = z.object({
+  sellerType: z.enum(SELLER_TYPES, {
+    error: 'აირჩიე, პირადი გამყიდველი ხარ თუ ავტოდილერი.',
+  }),
   phone: z
     .string()
     .trim()

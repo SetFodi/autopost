@@ -9,6 +9,7 @@ import { SiteFooter } from '@/components/landing/site-footer'
 import { SiteHeader } from '@/components/landing/site-header'
 import { SubmissionSection } from '@/components/landing/submission-section'
 import { JsonLd } from '@/components/marketing/json-ld'
+import { getCampaignAssetSelection } from '@/lib/campaign-assets.server'
 import { getSiteUrl } from '@/lib/site-url'
 
 const siteUrl = getSiteUrl().toString()
@@ -75,15 +76,17 @@ const structuredData = {
 }
 
 export default function Home() {
+  const campaign = getCampaignAssetSelection()
+
   return (
     <>
       <LandingAnalytics />
       <JsonLd data={structuredData} />
       <SiteHeader />
       <main>
-        <Hero />
-        <BeforeAfter />
-        <Deliverables />
+        <Hero assets={campaign.assets} />
+        <BeforeAfter assets={campaign.assets} />
+        <Deliverables assets={campaign.assets} />
         <HowItWorks />
         <Pricing />
         <GuideTeasers />

@@ -15,7 +15,8 @@ describe('WhatsApp delivery workflow', () => {
         'https://drive.google.com/drive/folders/example',
       ),
     ).toBe(
-      'გამარჯობა! თქვენი BMW 330i-ს Preview მზადაა 👇 https://drive.google.com/drive/folders/example\n\n' +
+      'გამარჯობა! თქვენი BMW 330i-ს Preview მზადაა 👇\n' +
+        'https://drive.google.com/drive/folders/example\n\n' +
         'თუ მოგეწონებათ, სრულ პაკეტს watermark-ის გარეშე გამოგიგზავნით — ფასი 14.90₾.\n\n' +
         'კითხვები თუ გაქვთ, აქვე მომწერეთ.',
     )

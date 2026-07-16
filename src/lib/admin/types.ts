@@ -11,6 +11,10 @@ export type SubmissionStatus = (typeof SUBMISSION_STATUSES)[number]
 
 export type VehiclePriceCurrency = 'GEL' | 'USD'
 
+export const SELLER_TYPES = ['private_seller', 'dealer'] as const
+
+export type SellerType = (typeof SELLER_TYPES)[number]
+
 export type AdminActionState = {
   kind: 'idle' | 'success' | 'error'
   message: string
@@ -31,6 +35,7 @@ export type AdminSubmissionListItem = {
   public_reference: string
   phone: string
   customer_name: string | null
+  seller_type: SellerType | null
   vehicle_model: string
   vehicle_year: number
   price: number | string
@@ -55,6 +60,11 @@ export type AdminSubmissionDetail = AdminSubmissionListItem & {
   engine: string | null
   transmission: string | null
   location: string | null
+  utm_source: string | null
+  utm_medium: string | null
+  utm_campaign: string | null
+  utm_content: string | null
+  utm_term: string | null
   additional_info: string | null
   consent_given: boolean
   internal_notes: string | null
@@ -68,4 +78,5 @@ export type AdminSubmissionDetail = AdminSubmissionListItem & {
 export type AdminDashboardFilters = {
   query: string
   status: SubmissionStatus | 'all'
+  sellerType: SellerType | 'all'
 }

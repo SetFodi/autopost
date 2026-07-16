@@ -1,7 +1,9 @@
 .next
+.remotion
 coverage
 node_modules
 pnpm-lock.yaml
+src/app/.well-known/workflow
 supabase/**/*.sql
 AGENTS.md
 eslint.config.mjs

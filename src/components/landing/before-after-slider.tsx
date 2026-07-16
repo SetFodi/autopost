@@ -5,12 +5,13 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import Image from 'next/image'
 import { Maximize2, MoveHorizontal, X } from 'lucide-react'
 
-import { demoAssets } from '@/lib/demo-assets'
+import type { CampaignAssetSet } from '@/lib/campaign-assets'
 
 const INITIAL_POSITION = 54
-const { heroBefore, heroAfter } = demoAssets
 
-type ComparisonStageProps = {
+type ComparisonAssets = Pick<CampaignAssetSet, 'heroBefore' | 'heroAfter'>
+
+type ComparisonStageProps = ComparisonAssets & {
   eager?: boolean
   position: number
   onChange: (position: number) => void
@@ -19,6 +20,8 @@ type ComparisonStageProps = {
 
 function ComparisonStage({
   eager = false,
+  heroBefore,
+  heroAfter,
   position,
   onChange,
   onInteract,
@@ -108,7 +111,7 @@ function ComparisonStage({
   )
 }
 
-export function BeforeAfterSlider() {
+export function BeforeAfterSlider({ heroBefore, heroAfter }: ComparisonAssets) {
   const [position, setPosition] = useState(INITIAL_POSITION)
   const [isAutoPlaying, setIsAutoPlaying] = useState(false)
   const [isDialogOpen, setIsDialogOpen] = useState(false)
@@ -178,6 +181,8 @@ export function BeforeAfterSlider() {
 
         <ComparisonStage
           eager
+          heroBefore={heroBefore}
+          heroAfter={heroAfter}
           position={position}
           onChange={setPosition}
           onInteract={stopAutoPlay}
@@ -223,6 +228,8 @@ export function BeforeAfterSlider() {
 
           {isDialogOpen ? (
             <ComparisonStage
+              heroBefore={heroBefore}
+              heroAfter={heroAfter}
               position={position}
               onChange={setPosition}
               onInteract={stopAutoPlay}

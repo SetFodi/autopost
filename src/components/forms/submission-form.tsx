@@ -4,12 +4,14 @@ import { useEffect, useRef, useState, type FormEvent } from 'react'
 import { standardSchemaResolver } from '@hookform/resolvers/standard-schema'
 import {
   AlertCircle,
+  Building2,
   Check,
   LoaderCircle,
   LockKeyhole,
   Send,
+  UserRound,
 } from 'lucide-react'
-import { useForm } from 'react-hook-form'
+import { useForm, type DefaultValues } from 'react-hook-form'
 
 import { PhotoDropzone } from '@/components/forms/photo-dropzone'
 import type { SelectedPhoto } from '@/components/forms/photo-types'
@@ -32,6 +34,7 @@ import {
   trackMetaFormStarted,
   trackMetaLeadOnce,
 } from '@/lib/analytics/meta-pixel'
+import { getCampaignAttribution } from '@/lib/analytics/attribution'
 import { createBrowserSupabaseClient } from '@/lib/supabase/client'
 import { normalizeGeorgianPhone } from '@/lib/validation/phone'
 import {
@@ -85,7 +88,7 @@ interface SubmissionFormProps {
 
 class SubmissionError extends Error {}
 
-const defaultValues: PublicSubmissionFormValues = {
+const defaultValues: DefaultValues<PublicSubmissionFormValues> = {
   phone: '',
   customerName: '',
   vehicleModel: '',
@@ -114,7 +117,7 @@ function genericResponseMessage(status: number) {
   if (status === 429)
     return 'ცოტა ხანში კიდევ სცადე. ამ ნომრიდან ბევრი მოთხოვნა დაფიქსირდა.'
   if (status === 413) return 'ფოტოების ზომა დასაშვებ ზღვარს აჭარბებს.'
-  return 'განაცხადის გაგზავნა დროებით ვერ მოხერხდა. ინფორმაცია შენახულია — გთხოვ, ხელახლა სცადო.'
+  return 'განაცხადის გაგზავნა დროებით ვერ მოხერხდა. შეყვანილი ინფორმაცია ფორმაში დარჩა — გთხოვ, ხელახლა სცადო.'
 }
 
 async function parseSuccessfulResponse<T>(response: Response): Promise<T> {
@@ -346,7 +349,9 @@ export function SubmissionForm({ whatsappNumber }: SubmissionFormProps) {
       throw new SubmissionError('შეიყვანე მოქმედი ქართული მობილურის ნომერი.')
 
     return {
+      ...getCampaignAttribution(),
       phone,
+      sellerType: values.sellerType,
       customerName: optionalValue(values.customerName),
       vehicleModel: values.vehicleModel.trim(),
       vehicleYear: Number(values.vehicleYear),
@@ -505,7 +510,7 @@ export function SubmissionForm({ whatsappNumber }: SubmissionFormProps) {
         photoCount: photos.length,
         resultUrl: completion.resultUrl,
       }
-      trackMetaLeadOnce(details.publicReference)
+      trackMetaLeadOnce(details.publicReference, values.sellerType)
       setSuccessDetails(details)
       setPhase('success')
       attemptKeyRef.current = null
@@ -519,7 +524,7 @@ export function SubmissionForm({ whatsappNumber }: SubmissionFormProps) {
       setSubmissionError(
         error instanceof SubmissionError
           ? error.message
-          : 'ატვირთვა დროებით ვერ დასრულდა. ინფორმაცია შენახულია — გთხოვ, ხელახლა სცადო.',
+          : 'ატვირთვა დროებით ვერ დასრულდა. შეყვანილი ინფორმაცია ფორმაში დარჩა — გთხოვ, ხელახლა სცადო.',
       )
     } finally {
       submittingLockRef.current = false
@@ -569,6 +574,52 @@ export function SubmissionForm({ whatsappNumber }: SubmissionFormProps) {
         disabled={isBusy}
         className="mt-7 space-y-5 disabled:opacity-75"
       >
+        <fieldset>
+          <legend className="form-label">
+            თქვენ ვინ ხართ? <span aria-hidden="true">*</span>
+          </legend>
+          <div
+            className="grid grid-cols-2 gap-2"
+            role="radiogroup"
+            aria-required="true"
+            aria-invalid={Boolean(errors.sellerType)}
+            aria-describedby={
+              errors.sellerType ? 'seller-type-error' : undefined
+            }
+          >
+            <label className="group relative min-w-0 cursor-pointer">
+              <input
+                type="radio"
+                value="private_seller"
+                className="peer sr-only"
+                {...register('sellerType')}
+              />
+              <span className="border-graphite/14 text-graphite/68 peer-checked:border-graphite peer-checked:bg-graphite peer-checked:text-ivory peer-focus-visible:ring-graphite flex min-h-12 items-center justify-center gap-2 border px-3 text-center text-xs font-bold transition peer-focus-visible:ring-2 peer-focus-visible:ring-offset-2 sm:text-sm">
+                <UserRound aria-hidden="true" className="size-4 shrink-0" />
+                <span className="min-w-0">პირადი გამყიდველი</span>
+              </span>
+            </label>
+            <label className="group relative min-w-0 cursor-pointer">
+              <input
+                type="radio"
+                value="dealer"
+                className="peer sr-only"
+                {...register('sellerType')}
+              />
+              <span className="border-graphite/14 text-graphite/68 peer-checked:border-graphite peer-checked:bg-graphite peer-checked:text-ivory peer-focus-visible:ring-graphite flex min-h-12 items-center justify-center gap-2 border px-3 text-center text-xs font-bold transition peer-focus-visible:ring-2 peer-focus-visible:ring-offset-2 sm:text-sm">
+                <Building2 aria-hidden="true" className="size-4 shrink-0" />
+                <span className="min-w-0">ავტოდილერი</span>
+              </span>
+            </label>
+          </div>
+          {errors.sellerType ? (
+            <p id="seller-type-error" role="alert" className="form-error">
+              <AlertCircle aria-hidden="true" className="size-4 shrink-0" />{' '}
+              {errors.sellerType.message}
+            </p>
+          ) : null}
+        </fieldset>
+
         <div className="grid gap-5 sm:grid-cols-2">
           <div>
             <label htmlFor="phone" className="form-label">

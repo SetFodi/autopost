@@ -1,12 +1,14 @@
 import { Check, Clock3, Sparkles } from 'lucide-react'
 
 import { BeforeAfterSlider } from '@/components/landing/before-after-slider'
+import { CampaignMediaUnavailable } from '@/components/landing/campaign-media-unavailable'
 import { TrackedCta } from '@/components/landing/tracked-cta'
+import type { CampaignAssetSet } from '@/lib/campaign-assets'
 
 const trustItems = [
   { icon: Check, text: 'პირველი Preview უფასოა' },
-  { icon: Clock3, text: 'მზადდება ავტომატურად' },
-  { icon: Sparkles, text: 'სუფთა, რეალისტური შედეგი' },
+  { icon: Clock3, text: 'Preview ავტომატურად მზადდება' },
+  { icon: Sparkles, text: 'ბარათი არ გჭირდება' },
 ] as const
 
 const brandStrip = [
@@ -19,7 +21,7 @@ const brandStrip = [
   'და სხვა',
 ] as const
 
-export function Hero() {
+export function Hero({ assets }: { assets: CampaignAssetSet | null }) {
   return (
     <section
       id="top"
@@ -48,7 +50,8 @@ export function Hero() {
             <p className="reveal reveal-3 text-ivory/58 mt-5 max-w-lg text-[0.95rem] leading-7 sm:mt-6 sm:text-base sm:leading-8">
               ატვირთე მანქანის რეალური ფოტოები. AutoPost გაასუფთავებს კადრს,
               მოაწესრიგებს ფონს და მოამზადებს Reel-ს, Story-სა და განცხადებას —
-              ბუნებრივად, ზედმეტი „სტუდიური“ ეფექტის გარეშე.
+              მზა ჩამოსატვირთ ფაილებად, ბუნებრივად, ზედმეტი „სტუდიური“ ეფექტის
+              გარეშე.
             </p>
 
             <div className="reveal reveal-4 mt-7 flex flex-col items-start gap-3.5 sm:flex-row sm:items-center sm:gap-5">
@@ -81,10 +84,22 @@ export function Hero() {
                 )
               })}
             </ul>
+
+            <p className="reveal reveal-5 text-ivory/48 mt-5 max-w-lg border-t border-white/[0.07] pt-4 text-xs leading-6">
+              AutoPost შენ ნაცვლად არაფერს აქვეყნებს — ჩამოსატვირთ ფაილებს პირად
+              Preview გვერდზე მიიღებ და თავად განათავსებ სასურველ პლატფორმაზე.
+            </p>
           </div>
 
           <div className="reveal reveal-3 min-w-0 lg:-mr-3 xl:mr-0">
-            <BeforeAfterSlider />
+            {assets ? (
+              <BeforeAfterSlider
+                heroBefore={assets.heroBefore}
+                heroAfter={assets.heroAfter}
+              />
+            ) : (
+              <CampaignMediaUnavailable />
+            )}
           </div>
         </div>
 

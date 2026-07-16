@@ -80,7 +80,7 @@ async function updateSubmissionRecord(
   const supabase = getServiceSupabaseClient()
   const { data: current, error: currentError } = await supabase
     .from('submissions')
-    .select('delivery_url, amount_paid')
+    .select('delivery_url, amount_paid, status')
     .eq('id', id)
     .eq('upload_state', 'complete')
     .maybeSingle()
@@ -96,7 +96,7 @@ async function updateSubmissionRecord(
     patch.delivery_url === undefined ? current.delivery_url : patch.delivery_url
   const amountPaid =
     patch.amount_paid === undefined ? current.amount_paid : patch.amount_paid
-  assertStatusPrerequisites(nextStatus, deliveryUrl, amountPaid)
+  assertStatusPrerequisites(nextStatus, deliveryUrl, amountPaid, current.status)
 
   const update: SubmissionPatch = {
     ...patch,

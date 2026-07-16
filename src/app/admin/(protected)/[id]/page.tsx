@@ -16,11 +16,13 @@ import {
   Hash,
   Images,
   MapPin,
+  Megaphone,
   Phone,
   Play,
   Send,
   Settings2,
   ShieldCheck,
+  Store,
   UserRound,
 } from 'lucide-react'
 
@@ -32,6 +34,7 @@ import { StatusBadge } from '@/components/admin/status-badge'
 import { SubmissionEditor } from '@/components/admin/submission-editor'
 import { WhatsAppWorkflow } from '@/components/admin/whatsapp-workflow'
 import { requireAdmin } from '@/lib/admin/auth'
+import { SELLER_TYPE_LABELS } from '@/lib/admin/constants'
 import {
   formatAdminDate,
   formatMoney,
@@ -182,6 +185,10 @@ export default async function SubmissionDetailPage({
             const missingPayment =
               action.status === 'converted' &&
               Number(submission.amount_paid ?? 0) <= 0
+            const missingDeliveryLifecycle =
+              action.status === 'converted' &&
+              submission.status !== 'delivered' &&
+              submission.status !== 'converted'
             return (
               <form
                 key={action.status}
@@ -195,7 +202,8 @@ export default async function SubmissionDetailPage({
                   disabled={
                     submission.status === action.status ||
                     missingDeliveryUrl ||
-                    missingPayment
+                    missingPayment ||
+                    missingDeliveryLifecycle
                   }
                   pendingLabel={action.pendingLabel}
                   className={`inline-flex min-h-10 items-center justify-center gap-2 rounded-xl border px-3 text-xs font-bold transition focus-visible:outline-2 focus-visible:outline-orange-400 ${action.className}`}
@@ -246,6 +254,15 @@ export default async function SubmissionDetailPage({
                 label="მომხმარებელი"
                 value={submission.customer_name}
                 icon={<UserRound aria-hidden="true" className="size-3.5" />}
+              />
+              <DetailItem
+                label="თქვენ ვინ ხართ?"
+                value={
+                  submission.seller_type
+                    ? SELLER_TYPE_LABELS[submission.seller_type]
+                    : 'არ არის მითითებული'
+                }
+                icon={<Store aria-hidden="true" className="size-3.5" />}
               />
               <DetailItem
                 label="მანქანა"
@@ -300,6 +317,33 @@ export default async function SubmissionDetailPage({
                 value={submission.additional_info}
                 wide
                 icon={<FileText aria-hidden="true" className="size-3.5" />}
+              />
+              <DetailItem
+                label="კამპანიის წყარო"
+                value={
+                  [submission.utm_source, submission.utm_medium]
+                    .filter(Boolean)
+                    .join(' / ') || 'ორგანული / უცნობი'
+                }
+                wide
+                icon={<Megaphone aria-hidden="true" className="size-3.5" />}
+              />
+              <DetailItem
+                label="UTM დეტალები"
+                value={[
+                  submission.utm_campaign
+                    ? `campaign: ${submission.utm_campaign}`
+                    : null,
+                  submission.utm_content
+                    ? `content: ${submission.utm_content}`
+                    : null,
+                  submission.utm_term ? `term: ${submission.utm_term}` : null,
+                ]
+                  .filter(Boolean)
+                  .join('\n')}
+                wide
+                mono
+                icon={<Hash aria-hidden="true" className="size-3.5" />}
               />
             </dl>
           </section>

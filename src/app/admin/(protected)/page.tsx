@@ -3,8 +3,10 @@ import { SubmissionList } from '@/components/admin/submission-list'
 import { requireAdmin } from '@/lib/admin/auth'
 import { getAdminDashboardData } from '@/lib/admin/queries'
 import {
+  SELLER_TYPES,
   SUBMISSION_STATUSES,
   type AdminDashboardFilters,
+  type SellerType,
   type SubmissionStatus,
 } from '@/lib/admin/types'
 
@@ -13,6 +15,7 @@ export const dynamic = 'force-dynamic'
 type DashboardPageProps = {
   searchParams: Promise<{
     q?: string | string[]
+    sellerType?: string | string[]
     status?: string | string[]
   }>
 }
@@ -32,8 +35,13 @@ export default async function AdminDashboardPage({
   )
     ? (requestedStatus as SubmissionStatus)
     : 'all'
+  const requestedSellerType = firstValue(params.sellerType)
+  const sellerType = SELLER_TYPES.includes(requestedSellerType as SellerType)
+    ? (requestedSellerType as SellerType)
+    : 'all'
   const filters: AdminDashboardFilters = {
     query: firstValue(params.q).trim().slice(0, 80),
+    sellerType,
     status,
   }
   const { stats, submissions, resultLimit } =

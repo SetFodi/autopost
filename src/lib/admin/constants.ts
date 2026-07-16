@@ -1,4 +1,9 @@
-import type { SubmissionStatus } from '@/lib/admin/types'
+import type { SellerType, SubmissionStatus } from '@/lib/admin/types'
+
+export const SELLER_TYPE_LABELS: Record<SellerType, string> = {
+  private_seller: 'პირადი გამყიდველი',
+  dealer: 'ავტოდილერი',
+}
 
 export const STATUS_DETAILS: Record<
   SubmissionStatus,

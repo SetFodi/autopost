@@ -101,28 +101,29 @@ Open [http://localhost:3000](http://localhost:3000). The public presentation can
 
 Copy `.env.example` to `.env.local`.
 
-| Variable                                              | Required                     | Purpose                                                                       |
-| ----------------------------------------------------- | ---------------------------- | ----------------------------------------------------------------------------- |
-| `NEXT_PUBLIC_SUPABASE_URL`                            | yes                          | Supabase project URL                                                          |
-| `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`                | yes                          | Modern browser-safe key; never put a secret key in a `NEXT_PUBLIC_` variable  |
-| `SUPABASE_SECRET_KEY`                                 | yes                          | Modern server-only key for intake, verification, analytics, and admin access  |
-| `NEXT_PUBLIC_SUPABASE_ANON_KEY`                       | legacy fallback              | Accepted when the modern publishable-key variable is absent                   |
-| `SUPABASE_SERVICE_ROLE_KEY`                           | legacy fallback              | Accepted when the modern secret-key variable is absent                        |
-| `ADMIN_EMAIL`                                         | yes for admin                | Exact email allowed into `/admin`; every server page/action re-checks it      |
-| `RESULT_TOKEN_SECRET`                                 | yes in production            | Dedicated 32+ byte HMAC secret for unguessable customer result links          |
-| `RATE_LIMIT_IP_HASH_SECRET`                           | yes in production            | Secret used to HMAC IPs before the database-backed rate-limit event is stored |
-| `CRON_SECRET`                                         | yes in production            | Separate 32+ character bearer secret Vercel sends to the cleanup route        |
-| `SUBMISSION_RATE_LIMIT_MAX`                           | no                           | Maximum new intake attempts per window; defaults to 3                         |
-| `SUBMISSION_INIT_REQUEST_RATE_LIMIT_MAX`              | no                           | Broader cap for every valid init request, including idempotent replays        |
-| `SUBMISSION_RATE_LIMIT_WINDOW_MINUTES`                | no                           | Rate-limit window length                                                      |
-| `NEXT_PUBLIC_WHATSAPP_NUMBER`                         | no                           | Support WhatsApp number, ideally `9955XXXXXXXX`                               |
-| `NEXT_PUBLIC_OPERATOR_NAME`                           | no                           | Real operator/company name in the footer and legal pages                      |
-| `NEXT_PUBLIC_OPERATOR_ADDRESS`                        | required to go live with TBC | Real legal/physical contact address shown in the terms                        |
-| `NEXT_PUBLIC_FACEBOOK_URL`                            | no                           | Real Facebook page URL                                                        |
-| `NEXT_PUBLIC_SITE_URL`                                | recommended                  | Canonical origin, for example `https://autopost.ge`                           |
-| `NEXT_PUBLIC_META_PIXEL_ID`                           | no                           | Enables Meta Pixel; no script or error is produced when absent                |
-| `TBC_API_KEY` / `TBC_CLIENT_ID` / `TBC_CLIENT_SECRET` | required for payments        | TBC E-Commerce merchant credentials                                           |
-| `TBC_API_BASE_URL`                                    | no                           | Defaults to `https://api.tbcbank.ge/v1`                                       |
+| Variable                                              | Required                     | Purpose                                                                         |
+| ----------------------------------------------------- | ---------------------------- | ------------------------------------------------------------------------------- |
+| `NEXT_PUBLIC_SUPABASE_URL`                            | yes                          | Supabase project URL                                                            |
+| `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`                | yes                          | Modern browser-safe key; never put a secret key in a `NEXT_PUBLIC_` variable    |
+| `SUPABASE_SECRET_KEY`                                 | yes                          | Modern server-only key for intake, verification, analytics, and admin access    |
+| `NEXT_PUBLIC_SUPABASE_ANON_KEY`                       | legacy fallback              | Accepted when the modern publishable-key variable is absent                     |
+| `SUPABASE_SERVICE_ROLE_KEY`                           | legacy fallback              | Accepted when the modern secret-key variable is absent                          |
+| `ADMIN_EMAIL`                                         | yes for admin                | Exact email allowed into `/admin`; every server page/action re-checks it        |
+| `RESULT_TOKEN_SECRET`                                 | yes in production            | Dedicated 32+ byte HMAC secret for unguessable customer result links            |
+| `RATE_LIMIT_IP_HASH_SECRET`                           | yes in production            | Secret used to HMAC IPs before the database-backed rate-limit event is stored   |
+| `CRON_SECRET`                                         | yes in production            | Separate 32+ character bearer secret Vercel sends to the cleanup route          |
+| `SUBMISSION_RATE_LIMIT_MAX`                           | no                           | Maximum new intake attempts per window; defaults to 3                           |
+| `SUBMISSION_INIT_REQUEST_RATE_LIMIT_MAX`              | no                           | Broader cap for every valid init request, including idempotent replays          |
+| `SUBMISSION_RATE_LIMIT_WINDOW_MINUTES`                | no                           | Rate-limit window length                                                        |
+| `CAMPAIGN_ASSET_SET`                                  | paid campaign                | Use `development` locally; set `real` only after all documented media exists    |
+| `NEXT_PUBLIC_WHATSAPP_NUMBER`                         | paid campaign                | Support WhatsApp number in international form; current value is `+995557100020` |
+| `NEXT_PUBLIC_OPERATOR_NAME`                           | paid campaign                | Real operator/company name in the footer and legal pages                        |
+| `NEXT_PUBLIC_OPERATOR_ADDRESS`                        | required to go live with TBC | Real legal/physical contact address shown in the terms                          |
+| `NEXT_PUBLIC_FACEBOOK_URL`                            | no                           | Real Facebook page URL                                                          |
+| `NEXT_PUBLIC_SITE_URL`                                | paid campaign                | Canonical HTTPS origin, for example `https://autopost.ge`                       |
+| `NEXT_PUBLIC_META_PIXEL_ID`                           | paid campaign                | Enables Meta Pixel; no script or error is produced when absent locally          |
+| `TBC_API_KEY` / `TBC_CLIENT_ID` / `TBC_CLIENT_SECRET` | required for payments        | TBC E-Commerce merchant credentials                                             |
+| `TBC_API_BASE_URL`                                    | no                           | Defaults to `https://api.tbcbank.ge/v1`                                         |
 
 Generate the IP hashing secret locally:
 
@@ -314,21 +315,21 @@ The latest credential-free run and the clearly separated live-account checks are
 - [ ] desktop/large desktop: media and editorial layout remain balanced
 - [ ] Georgian, Latin, Cyrillic, numbers, `₾`, `$`, and car specs render without missing glyphs
 - [ ] a long mixed model such as `Mercedes-Benz GLE 450 4MATIC — ახალი` wraps correctly
-- [ ] all primary CTAs use `მიიღე უფასო Preview` and focus/scroll to the form
+- [ ] all primary CTAs use `მიიღე უფასო Preview` and navigate to `/#preview-form` from every public route
 
 ### Upload and validation
 
 - [ ] native mobile multi-photo picker works
-- [ ] exactly 5 photos completes successfully
+- [ ] exactly 3 photos completes successfully
 - [ ] exactly 15 photos completes successfully
-- [ ] fewer than 5 and more than 15 are rejected clearly
+- [ ] fewer than 3 and more than 15 are rejected clearly
 - [ ] JPG/JPEG/PNG/WEBP and supported HEIC files are accepted
 - [ ] an invalid MIME type is rejected client- and server-side
 - [ ] an oversized file and oversized total are rejected clearly
 - [ ] slow upload shows understandable progress/status
 - [ ] a partial failure preserves form data and offers a clear retry
 - [ ] double-clicking submit cannot create a second submission
-- [ ] formatted Georgian numbers normalize to `+9955XXXXXXXX`
+- [ ] `557100020` and formatted variants normalize to `+995557100020`
 - [ ] invalid Georgian phone errors are written in Georgian
 - [ ] the success state appears only after every storage/database operation completes
 
@@ -353,7 +354,8 @@ The latest credential-free run and the clearly separated live-account checks are
 
 - [ ] Pixel disabled state has no script errors
 - [ ] Pixel `Lead` fires once, only after verified completion
-- [ ] missing optional WhatsApp/operator/Facebook values hide or degrade cleanly
+- [ ] missing WhatsApp/operator/Facebook values hide or degrade cleanly in the app
+- [ ] `campaign:check` blocks missing WhatsApp/operator values while Facebook remains optional
 - [ ] missing required Supabase values show a readable development configuration state
 - [ ] the database-backed rate limit blocks the configured excess attempt across separate server requests
 

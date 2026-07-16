@@ -24,6 +24,7 @@
     "test:db": "pnpm dlx supabase@latest test db",
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
+    "campaign:check": "vitest run tests/campaign-assets.test.ts && node scripts/campaign-check.mjs",
     "format": "prettier --write .",
     "format:check": "prettier --check ."
   },
