@@ -4,17 +4,25 @@
  */
 export const demoAssets = {
   heroBefore: {
-    src: '/demo/hero-before-v2.jpg',
-    alt: 'გამყიდველის ტელეფონით გადაღებული ფოტო — Hyundai Sonata საცხოვრებელი კორპუსის ეზოში',
+    src: '/demo/hero-before-v3.webp',
+    alt: 'საილუსტრაციო საწყისი ფოტო — ტელეფონით ნაჩქარევად გადაღებული Hyundai Sonata საცხოვრებელ ეზოში',
     fileLabel: 'IMG_4821.JPG',
     objectPosition: 'object-center',
   },
   heroAfter: {
-    src: '/demo/hero-after-v2.jpg',
-    alt: 'AutoPost-ის მზა სარეკლამო კადრი — იგივე Hyundai Sonata სუფთა, რეალისტურ გარემოში',
+    src: '/demo/hero-after-v3.webp',
+    alt: 'AutoPost-ის საილუსტრაციო შედეგი — იგივე Hyundai Sonata გასწორებული კომპოზიციითა და ბუნებრივი დამუშავებით',
     model: 'Hyundai Sonata',
     specs: '2020 · 72 000 კმ · 2.4 ბენზინი · თბილისი',
     price: '38 500 ₾',
+    objectPosition: 'object-center',
+  },
+
+  sourceSonata: {
+    src: '/demo/hero-before-v3.webp',
+    alt: 'საილუსტრაციო საწყისი ფოტო — Hyundai Sonata საცხოვრებელ ეზოში',
+    fileLabel: 'IMG_4821.JPG',
+    model: 'Hyundai Sonata',
     objectPosition: 'object-center',
   },
 

@@ -129,15 +129,16 @@ const expectedAssetPaths = [
   '/campaign/final/marketplace-card.jpg',
 ]
 
-if (process.env.CAMPAIGN_ASSET_SET?.trim().toLowerCase() === 'real') {
+const usesRealCampaignAssets =
+  process.env.CAMPAIGN_ASSET_SET?.trim().toLowerCase() === 'real'
+
+if (usesRealCampaignAssets) {
   pass('real campaign asset set is active')
 } else {
-  fail(
-    'CAMPAIGN_ASSET_SET must be "real". Development/demo media cannot be used for a paid campaign.',
-  )
+  pass('bundled AutoPost showcase is active')
 }
 
-if (manifest) {
+if (manifest && usesRealCampaignAssets) {
   const manifestAssetPaths = [
     ...(Array.isArray(manifest.originals)
       ? manifest.originals.map((asset) => asset.src)
@@ -232,6 +233,36 @@ if (manifest) {
   }
 }
 
+if (!usesRealCampaignAssets) {
+  const showcaseAssetPaths = [
+    '/demo/hero-before-v3.webp',
+    '/demo/hero-after-v3.webp',
+  ]
+
+  for (const assetPath of showcaseAssetPaths) {
+    const filesystemPath = join(
+      projectRoot,
+      'public',
+      assetPath.replace(/^\/+/, ''),
+    )
+
+    if (!existsSync(filesystemPath)) {
+      fail(`required showcase asset is missing: public${assetPath}`)
+      continue
+    }
+
+    if (
+      !statSync(filesystemPath).isFile() ||
+      statSync(filesystemPath).size < 1
+    ) {
+      fail(`required showcase asset is empty: public${assetPath}`)
+      continue
+    }
+
+    pass(`found public${assetPath}`)
+  }
+}
+
 const trackedCtaPath = join(
   projectRoot,
   'src',
@@ -281,14 +312,13 @@ try {
   const usesCampaignSelection = examplesPage.includes(
     'getCampaignAssetSelection',
   )
-  const hasBlockedState = examplesPage.includes('CampaignMediaUnavailable')
   const importsDemoMedia = examplesPage.includes('demoAssets')
 
-  if (usesCampaignSelection && hasBlockedState && !importsDemoMedia) {
-    pass('examples route uses the production-safe campaign media gate')
+  if (usesCampaignSelection && !importsDemoMedia) {
+    pass('examples route uses the production-safe campaign media selection')
   } else {
     fail(
-      'examples route must use campaign-selected media, show the blocked-state warning, and never import demo assets directly',
+      'examples route must use campaign-selected media and never import demo assets directly',
     )
   }
 } catch {

@@ -1,8 +1,9 @@
 # Real campaign media
 
-Do not place stock photos, generated examples, or development demo media here.
 This directory is reserved for the first excellent manual transformation of one
-real vehicle.
+real vehicle. The site already has a disclosed generated showcase under
+`public/demo`, so these paths are an optional upgrade rather than a launch
+blocker. Do not mix stock or generated examples into this real-media directory.
 
 Required files:
 
@@ -27,4 +28,5 @@ public/campaign/final/marketplace-card.jpg
 
 After adding the files, complete the real vehicle metadata and accessible alt
 text in `config/campaign-assets.json`, set `CAMPAIGN_ASSET_SET=real`, and run
-`pnpm campaign:check`.
+`pnpm campaign:check`. If any required real file is absent, the site safely uses
+the bundled showcase instead.

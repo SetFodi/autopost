@@ -1,7 +1,6 @@
 import { Check, Clock3, Sparkles } from 'lucide-react'
 
 import { BeforeAfterSlider } from '@/components/landing/before-after-slider'
-import { CampaignMediaUnavailable } from '@/components/landing/campaign-media-unavailable'
 import { TrackedCta } from '@/components/landing/tracked-cta'
 import type { CampaignAssetSet } from '@/lib/campaign-assets'
 
@@ -21,7 +20,7 @@ const brandStrip = [
   'და სხვა',
 ] as const
 
-export function Hero({ assets }: { assets: CampaignAssetSet | null }) {
+export function Hero({ assets }: { assets: CampaignAssetSet }) {
   return (
     <section
       id="top"
@@ -92,14 +91,11 @@ export function Hero({ assets }: { assets: CampaignAssetSet | null }) {
           </div>
 
           <div className="reveal reveal-3 min-w-0 lg:-mr-3 xl:mr-0">
-            {assets ? (
-              <BeforeAfterSlider
-                heroBefore={assets.heroBefore}
-                heroAfter={assets.heroAfter}
-              />
-            ) : (
-              <CampaignMediaUnavailable />
-            )}
+            <BeforeAfterSlider
+              heroBefore={assets.heroBefore}
+              heroAfter={assets.heroAfter}
+              kind={assets.kind}
+            />
           </div>
         </div>
 

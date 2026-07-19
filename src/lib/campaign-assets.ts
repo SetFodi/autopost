@@ -21,7 +21,7 @@ export type CampaignFormatAsset = {
 }
 
 export type CampaignAssetSet = {
-  kind: 'real' | 'development'
+  kind: 'real' | 'showcase'
   heroBefore: {
     src: string
     alt: string
@@ -47,15 +47,10 @@ export type CampaignAssetSet = {
   }[]
 }
 
-export type CampaignAssetSelection =
-  | {
-      state: 'real' | 'development-fallback'
-      assets: CampaignAssetSet
-    }
-  | {
-      state: 'blocked'
-      assets: null
-    }
+export type CampaignAssetSelection = {
+  state: 'real' | 'showcase'
+  assets: CampaignAssetSet
+}
 
 const firstOriginal = campaignManifest.originals[0]!
 const firstStory = campaignManifest.final.stories[0]!
@@ -119,11 +114,11 @@ export const realCampaignAssets: CampaignAssetSet = {
   salesCopy: campaignManifest.salesCopy,
 }
 
-export const developmentCampaignAssets: CampaignAssetSet = {
-  kind: 'development',
+export const showcaseCampaignAssets: CampaignAssetSet = {
+  kind: 'showcase',
   heroBefore: demoAssets.heroBefore,
   heroAfter: demoAssets.heroAfter,
-  sourcePhotos: [demoAssets.sourceToyota, demoAssets.sourceVw],
+  sourcePhotos: [demoAssets.sourceSonata, demoAssets.sourceToyota],
   reel: demoAssets.reelAudi,
   story: demoAssets.storyTesla,
   carousel: demoAssets.carouselPorsche,
@@ -133,21 +128,15 @@ export const developmentCampaignAssets: CampaignAssetSet = {
 
 export function selectCampaignAssets({
   assetSet,
-  environment,
 }: {
   assetSet: string | undefined
-  environment: string | undefined
 }): CampaignAssetSelection {
   if (assetSet?.trim().toLowerCase() === 'real') {
     return { state: 'real', assets: realCampaignAssets }
   }
 
-  if (environment !== 'production') {
-    return {
-      state: 'development-fallback',
-      assets: developmentCampaignAssets,
-    }
+  return {
+    state: 'showcase',
+    assets: showcaseCampaignAssets,
   }
-
-  return { state: 'blocked', assets: null }
 }

@@ -115,7 +115,7 @@ Copy `.env.example` to `.env.local`.
 | `SUBMISSION_RATE_LIMIT_MAX`                           | no                           | Maximum new intake attempts per window; defaults to 3                           |
 | `SUBMISSION_INIT_REQUEST_RATE_LIMIT_MAX`              | no                           | Broader cap for every valid init request, including idempotent replays          |
 | `SUBMISSION_RATE_LIMIT_WINDOW_MINUTES`                | no                           | Rate-limit window length                                                        |
-| `CAMPAIGN_ASSET_SET`                                  | paid campaign                | Use `development` locally; set `real` only after all documented media exists    |
+| `CAMPAIGN_ASSET_SET`                                  | no                           | Defaults to the bundled showcase; set `real` after all documented media exists  |
 | `NEXT_PUBLIC_WHATSAPP_NUMBER`                         | paid campaign                | Support WhatsApp number in international form; current value is `+995557100020` |
 | `NEXT_PUBLIC_OPERATOR_NAME`                           | paid campaign                | Real operator/company name in the footer and legal pages                        |
 | `NEXT_PUBLIC_OPERATOR_ADDRESS`                        | required to go live with TBC | Real legal/physical contact address shown in the terms                          |

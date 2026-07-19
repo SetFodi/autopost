@@ -2,9 +2,11 @@
 
 ## Before launch
 
-- Create one excellent real vehicle transformation for the campaign media and
-  production templates.
-- Place final campaign assets into the documented paths.
+- Review the bundled, clearly disclosed showcase transformation on a real
+  phone. Replacing it with a real customer transformation is an optional
+  upgrade, not a launch blocker.
+- If using real campaign media, place every final asset into the documented
+  paths before setting `CAMPAIGN_ASSET_SET=real`.
 - Ask one person who has actually sold cars:
   - **„შენ რომ მანქანას ყიდდე, ამას გამოიყენებდი?“**
 - Do not launch if the result is not clearly stronger than normal Georgian dealer posts.

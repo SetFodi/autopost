@@ -1,8 +1,20 @@
 # Demo photography
 
-Stand-in campaign assets. Per the campaign gate in the README, the first
-genuinely impressive manual transformation of a real customer vehicle must
-replace these before any advertising launches.
+Stand-in and showcase assets used to explain AutoPost before customer-approved
+work is available. The generated showcase is explicitly labeled as
+illustrative in the interface and can safely ship; it must never be described
+as a real customer's submission.
+
+## Generated AutoPost showcase
+
+`hero-before-v3.webp` and `hero-after-v3.webp` were generated as a matched,
+fictional Hyundai Sonata listing example. The before prompt requested an
+ordinary, imperfect phone photo in a Georgian residential courtyard. The after
+prompt preserved the same vehicle while improving framing, exposure, glare and
+background clutter without using a studio or cinematic treatment.
+
+Both images contain no real customer media, readable license plate, people,
+brand endorsement, or claim of an actual completed order.
 
 ## "Before" photos — deliberately ordinary marketplace-style shots
 
@@ -33,6 +45,6 @@ From Unsplash, used under the [Unsplash License](https://unsplash.com/license)
 | `after-tesla.jpg` / `format-story.jpg`      | Unsplash contributor (Tesla Model 3)     |
 | `format-card.jpg`                           | Unsplash contributor (Mercedes-AMG GT R) |
 
-The hero slider intentionally pairs the same model (matte Selenite Grey
-Mercedes-AMG GT R) in both treatments: the seller's harsh-daylight driveway
-snapshot on the left, the professional editorial shot on the right.
+The older sourced files remain available for secondary format examples and
+historical development use. The production hero slider uses the generated v3
+Hyundai pair documented above.

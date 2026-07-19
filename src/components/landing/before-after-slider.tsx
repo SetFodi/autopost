@@ -10,6 +10,9 @@ import type { CampaignAssetSet } from '@/lib/campaign-assets'
 const INITIAL_POSITION = 54
 
 type ComparisonAssets = Pick<CampaignAssetSet, 'heroBefore' | 'heroAfter'>
+type ComparisonProps = ComparisonAssets & {
+  kind?: CampaignAssetSet['kind']
+}
 
 type ComparisonStageProps = ComparisonAssets & {
   eager?: boolean
@@ -111,7 +114,11 @@ function ComparisonStage({
   )
 }
 
-export function BeforeAfterSlider({ heroBefore, heroAfter }: ComparisonAssets) {
+export function BeforeAfterSlider({
+  heroBefore,
+  heroAfter,
+  kind = 'real',
+}: ComparisonProps) {
   const [position, setPosition] = useState(INITIAL_POSITION)
   const [isAutoPlaying, setIsAutoPlaying] = useState(false)
   const [isDialogOpen, setIsDialogOpen] = useState(false)
@@ -153,7 +160,9 @@ export function BeforeAfterSlider({ heroBefore, heroAfter }: ComparisonAssets) {
           <div className="flex min-w-0 items-center gap-2.5">
             <span className="ba-status-dot" aria-hidden="true" />
             <span className="text-ivory/70 truncate font-mono text-[9px] font-semibold tracking-[0.15em] uppercase sm:text-[10px]">
-              რეალური ფოტო · რეალური შედეგი
+              {kind === 'showcase'
+                ? 'საილუსტრაციო დემო · იგივე მანქანა'
+                : 'რეალური ფოტო · რეალური შედეგი'}
             </span>
           </div>
 
@@ -237,8 +246,8 @@ export function BeforeAfterSlider({ heroBefore, heroAfter }: ComparisonAssets) {
           ) : null}
 
           <p className="text-ivory/45 mt-3 text-center text-xs leading-5 sm:text-sm">
-            იგივე მანქანა, იგივე რეალური პროპორციები — მხოლოდ უფრო სუფთა და
-            გასაყიდად გამზადებული კადრი.
+            იგივე მანქანა — უფრო სუფთა კომპოზიციითა და ბუნებრივი დამუშავებით,
+            გასაყიდად მზა კადრად.
           </p>
         </div>
       </dialog>
