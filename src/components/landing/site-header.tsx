@@ -1,9 +1,19 @@
 import Link from 'next/link'
 
 import { TrackedCta } from '@/components/landing/tracked-cta'
-import { localizedHome, localizedSection, type AppLocale } from '@/lib/i18n'
+import {
+  localizedHome,
+  localizedMarketingPath,
+  type AppLocale,
+} from '@/lib/i18n'
 
-export function SiteHeader({ locale = 'ka' }: { locale?: AppLocale }) {
+export function SiteHeader({
+  locale = 'ka',
+  languageHref,
+}: {
+  locale?: AppLocale
+  languageHref?: string
+}) {
   const english = locale === 'en'
   const home = localizedHome(locale)
 
@@ -27,38 +37,33 @@ export function SiteHeader({ locale = 'ka' }: { locale?: AppLocale }) {
         >
           <Link
             className="nav-link"
-            href={
-              english ? localizedSection(locale, 'transformation') : '/examples'
-            }
+            href={localizedMarketingPath(locale, 'examples')}
           >
             {english ? 'Examples' : 'მაგალითები'}
           </Link>
           <Link
             className="nav-link"
-            href={
-              english
-                ? localizedSection(locale, 'how-it-works')
-                : '/how-it-works'
-            }
+            href={localizedMarketingPath(locale, 'howItWorks')}
           >
             {english ? 'How it works' : 'როგორ მუშაობს'}
           </Link>
           <Link
             className="nav-link"
-            href={english ? localizedSection(locale, 'pricing') : '/pricing'}
+            href={localizedMarketingPath(locale, 'pricing')}
           >
             {english ? 'Pricing' : 'ფასი'}
           </Link>
-          {english ? null : (
-            <Link className="nav-link" href="/guides">
-              გზამკვლევები
-            </Link>
-          )}
+          <Link
+            className="nav-link"
+            href={localizedMarketingPath(locale, 'guides')}
+          >
+            {english ? 'Guides' : 'გზამკვლევები'}
+          </Link>
         </nav>
 
         <div className="flex shrink-0 items-center gap-2 sm:gap-3">
           <Link
-            href={english ? '/' : '/en'}
+            href={languageHref ?? (english ? '/' : '/en')}
             hrefLang={english ? 'ka' : 'en'}
             lang={english ? 'ka' : 'en'}
             className="text-ivory/62 hover:border-amber/50 hover:text-amber grid min-h-10 min-w-10 place-items-center border border-white/12 px-2 font-mono text-[10px] font-semibold tracking-[0.12em] transition-colors sm:min-h-11"

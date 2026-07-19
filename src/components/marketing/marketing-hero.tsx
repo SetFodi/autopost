@@ -1,12 +1,15 @@
 import Link from 'next/link'
 import { ArrowLeft } from 'lucide-react'
 
+import { localizedHome, type AppLocale } from '@/lib/i18n'
+
 export function MarketingHero({
   index,
   eyebrow,
   title,
   accent,
   description,
+  locale = 'ka',
   children,
 }: {
   index: string
@@ -14,6 +17,7 @@ export function MarketingHero({
   title: string
   accent?: string
   description: string
+  locale?: AppLocale
   children?: React.ReactNode
 }) {
   return (
@@ -21,10 +25,11 @@ export function MarketingHero({
       <div className="bg-amber/[0.045] pointer-events-none absolute -top-52 left-1/2 size-[42rem] -translate-x-1/2 rounded-full blur-[130px]" />
       <div className="site-container relative">
         <Link
-          href="/"
+          href={localizedHome(locale)}
           className="text-ivory/45 hover:text-amber inline-flex items-center gap-2 text-xs font-bold transition-colors"
         >
-          <ArrowLeft aria-hidden="true" className="size-3.5" /> მთავარი
+          <ArrowLeft aria-hidden="true" className="size-3.5" />{' '}
+          {locale === 'en' ? 'Home' : 'მთავარი'}
         </Link>
 
         <div className="mt-10 grid gap-8 lg:grid-cols-[minmax(0,1fr)_minmax(18rem,0.42fr)] lg:items-end">

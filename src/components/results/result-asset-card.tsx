@@ -1,20 +1,24 @@
 import { Download, Maximize2 } from 'lucide-react'
 
 import { ResultImagePreview } from '@/components/results/result-image-preview'
-import { RESULT_KIND_LABELS } from '@/lib/fulfillment/result-assets'
+import { getResultKindLabel } from '@/lib/fulfillment/result-assets'
 import type { ResultAsset } from '@/lib/fulfillment/types'
+import type { AppLocale } from '@/lib/i18n'
 
 export function ResultAssetCard({
   asset,
   index,
   onOpen,
   variant,
+  locale = 'ka',
 }: {
   asset: ResultAsset
   index: number
   onOpen: () => void
   variant: 'story' | 'square'
+  locale?: AppLocale
 }) {
+  const label = getResultKindLabel(asset.kind, locale)
   return (
     <article
       className={`group relative shrink-0 snap-start overflow-hidden border border-white/10 bg-[#11100e] transition duration-300 hover:-translate-y-1 hover:border-[#e8a03a]/35 hover:shadow-[0_24px_70px_rgb(0_0_0/0.42)] ${
@@ -25,7 +29,7 @@ export function ResultAssetCard({
         type="button"
         onClick={onOpen}
         className={`relative block w-full overflow-hidden ${variant === 'story' ? 'aspect-[9/16]' : 'aspect-square'}`}
-        aria-label={`${RESULT_KIND_LABELS[asset.kind]} დიდ ფანჯარაში გახსნა`}
+        aria-label={`${label} ${locale === 'en' ? 'open in larger viewer' : 'დიდ ფანჯარაში გახსნა'}`}
         aria-haspopup="dialog"
       >
         <ResultImagePreview asset={asset} className="transition duration-500" />
@@ -39,7 +43,7 @@ export function ResultAssetCard({
       </button>
       <div className="flex items-center justify-between gap-4 border-t border-white/10 p-4">
         <div className="min-w-0">
-          <p className="text-sm font-bold">{RESULT_KIND_LABELS[asset.kind]}</p>
+          <p className="text-sm font-bold">{label}</p>
           <p className="text-ivory/30 mt-1 truncate font-mono text-[9px]">
             {asset.filename}
           </p>
@@ -49,7 +53,7 @@ export function ResultAssetCard({
           target="_blank"
           rel="noreferrer"
           className="text-amber hover:bg-amber hover:text-graphite grid size-10 shrink-0 place-items-center border border-current transition-colors"
-          aria-label={`${RESULT_KIND_LABELS[asset.kind]} ჩამოტვირთვა`}
+          aria-label={`${label} ${locale === 'en' ? 'download' : 'ჩამოტვირთვა'}`}
         >
           <Download className="size-4" aria-hidden="true" />
         </a>

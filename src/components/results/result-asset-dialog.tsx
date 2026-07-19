@@ -4,19 +4,22 @@ import { ChevronLeft, ChevronRight, Download, X } from 'lucide-react'
 import { useCallback, useEffect, useRef } from 'react'
 
 import { ResultImagePreview } from '@/components/results/result-image-preview'
-import { RESULT_KIND_LABELS } from '@/lib/fulfillment/result-assets'
+import { getResultKindLabel } from '@/lib/fulfillment/result-assets'
 import type { ResultAsset } from '@/lib/fulfillment/types'
+import type { AppLocale } from '@/lib/i18n'
 
 export function ResultAssetDialog({
   activeAsset,
   assets,
   onClose,
   onSelect,
+  locale = 'ka',
 }: {
   activeAsset: ResultAsset | null
   assets: ResultAsset[]
   onClose: () => void
   onSelect: (asset: ResultAsset) => void
+  locale?: AppLocale
 }) {
   const dialogRef = useRef<HTMLDialogElement>(null)
   const activeIndex = activeAsset
@@ -69,7 +72,7 @@ export function ResultAssetDialog({
                 id="result-dialog-title"
                 className="mt-1 truncate text-sm font-bold sm:text-base"
               >
-                {RESULT_KIND_LABELS[activeAsset.kind]}
+                {getResultKindLabel(activeAsset.kind, locale)}
               </h2>
             </div>
             <div className="flex items-center gap-2">
@@ -80,13 +83,17 @@ export function ResultAssetDialog({
                 className="text-amber hover:bg-amber hover:text-graphite inline-flex min-h-10 items-center gap-2 border border-current px-3 text-xs font-bold transition-colors"
               >
                 <Download className="size-4" aria-hidden="true" />
-                <span className="hidden sm:inline">ჩამოტვირთვა</span>
+                <span className="hidden sm:inline">
+                  {locale === 'en' ? 'Download' : 'ჩამოტვირთვა'}
+                </span>
               </a>
               <button
                 type="button"
                 onClick={() => dialogRef.current?.close()}
                 className="text-ivory/60 hover:text-ivory grid size-10 place-items-center border border-white/12 transition-colors"
-                aria-label="ფანჯრის დახურვა"
+                aria-label={
+                  locale === 'en' ? 'Close viewer' : 'ფანჯრის დახურვა'
+                }
               >
                 <X className="size-4" aria-hidden="true" />
               </button>
@@ -117,7 +124,9 @@ export function ResultAssetDialog({
                   type="button"
                   onClick={() => selectOffset(-1)}
                   className="text-ivory hover:bg-amber hover:text-graphite absolute left-3 grid size-11 place-items-center border border-white/15 bg-black/60 backdrop-blur transition-colors sm:left-5"
-                  aria-label="წინა მასალა"
+                  aria-label={
+                    locale === 'en' ? 'Previous asset' : 'წინა მასალა'
+                  }
                 >
                   <ChevronLeft className="size-5" aria-hidden="true" />
                 </button>
@@ -125,7 +134,7 @@ export function ResultAssetDialog({
                   type="button"
                   onClick={() => selectOffset(1)}
                   className="text-ivory hover:bg-amber hover:text-graphite absolute right-3 grid size-11 place-items-center border border-white/15 bg-black/60 backdrop-blur transition-colors sm:right-5"
-                  aria-label="შემდეგი მასალა"
+                  aria-label={locale === 'en' ? 'Next asset' : 'შემდეგი მასალა'}
                 >
                   <ChevronRight className="size-5" aria-hidden="true" />
                 </button>

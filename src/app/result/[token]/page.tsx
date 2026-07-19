@@ -7,10 +7,22 @@ import { verifyResultToken } from '@/lib/fulfillment/result-token'
 
 export const dynamic = 'force-dynamic'
 
-export const metadata: Metadata = {
-  title: 'თქვენი შედეგი · AutoPost',
-  description: 'AutoPost-ის პირადი Preview და publish-ready პაკეტი.',
-  robots: { follow: false, index: false },
+export async function generateMetadata({
+  searchParams,
+}: {
+  searchParams: Promise<{ lang?: string }>
+}): Promise<Metadata> {
+  const { lang } = await searchParams
+  const english = lang === 'en'
+  return {
+    title: english
+      ? 'Your private results · AutoPost'
+      : 'თქვენი შედეგი · AutoPost',
+    description: english
+      ? 'Your private AutoPost preview and publish-ready content package.'
+      : 'AutoPost-ის პირადი Preview და publish-ready პაკეტი.',
+    robots: { follow: false, index: false },
+  }
 }
 
 export default async function ResultPage({
@@ -18,7 +30,7 @@ export default async function ResultPage({
   searchParams,
 }: {
   params: Promise<{ token: string }>
-  searchParams: Promise<{ payment?: string }>
+  searchParams: Promise<{ payment?: string; lang?: string }>
 }) {
   const [{ token }, query] = await Promise.all([params, searchParams])
   const submissionId = verifyResultToken(token)
@@ -31,6 +43,7 @@ export default async function ResultPage({
       initialSnapshot={snapshot}
       token={token}
       paymentReturn={query.payment === 'return'}
+      locale={query.lang === 'en' ? 'en' : 'ka'}
     />
   )
 }

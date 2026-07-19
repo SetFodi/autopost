@@ -66,7 +66,11 @@ export function HowItWorks({ locale = 'ka' }: { locale?: AppLocale }) {
             const Icon = stepIcons[index]!
             const number = String(index + 1).padStart(2, '0')
             return (
-              <li key={number} className="step-card p-6 sm:p-7 lg:p-8">
+              <li
+                id={`step-${index + 1}`}
+                key={number}
+                className="step-card scroll-mt-24 p-6 sm:p-7 lg:p-8"
+              >
                 <div className="flex items-start justify-between gap-4">
                   <span className="text-amber font-mono text-4xl font-semibold tracking-[-0.04em] sm:text-5xl">
                     {number}

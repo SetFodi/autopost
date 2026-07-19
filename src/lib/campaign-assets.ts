@@ -1,6 +1,7 @@
 import campaignManifest from '../../config/campaign-assets.json'
 
 import { demoAssets, demoSalesCopy } from '@/lib/demo-assets'
+import type { AppLocale } from '@/lib/i18n'
 
 export type CampaignSourcePhoto = {
   src: string
@@ -138,5 +139,44 @@ export function selectCampaignAssets({
   return {
     state: 'showcase',
     assets: showcaseCampaignAssets,
+  }
+}
+
+export function getLocalizedCampaignAssets(
+  assets: CampaignAssetSet,
+  locale: AppLocale,
+): CampaignAssetSet {
+  if (locale === 'ka') return assets
+
+  return {
+    ...assets,
+    heroBefore: {
+      ...assets.heroBefore,
+      alt: 'Original seller photo of a vehicle before AutoPost preparation',
+    },
+    heroAfter: {
+      ...assets.heroAfter,
+      alt: `${assets.heroAfter.model} prepared by AutoPost as a realistic sales-ready vehicle image`,
+    },
+    sourcePhotos: assets.sourcePhotos.map((photo, index) => ({
+      ...photo,
+      alt: `Original seller photo ${index + 1} of ${photo.model} before AutoPost preparation`,
+    })),
+    reel: {
+      ...assets.reel,
+      alt: `${assets.reel.model} vertical car sales Reel prepared by AutoPost`,
+    },
+    story: {
+      ...assets.story,
+      alt: `${assets.story.model} Instagram Story design prepared by AutoPost`,
+    },
+    carousel: {
+      ...assets.carousel,
+      alt: `${assets.carousel.model} car sales carousel prepared by AutoPost`,
+    },
+    card: {
+      ...assets.card,
+      alt: `${assets.card.model} square marketplace listing card prepared by AutoPost`,
+    },
   }
 }

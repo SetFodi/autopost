@@ -1,4 +1,5 @@
 import type { GeneratedAssetKind } from '@/lib/fulfillment/types'
+import type { AppLocale } from '@/lib/i18n'
 
 export const RESULT_KIND_LABELS: Record<GeneratedAssetKind, string> = {
   carousel_1: 'Carousel · 1',
@@ -14,6 +15,14 @@ export const RESULT_KIND_LABELS: Record<GeneratedAssetKind, string> = {
   story_1: 'Story · 1',
   story_2: 'Story · 2',
   story_3: 'Story · 3',
+}
+
+export function getResultKindLabel(
+  kind: GeneratedAssetKind,
+  locale: AppLocale,
+) {
+  if (kind === 'package' && locale === 'en') return 'Complete ZIP package'
+  return RESULT_KIND_LABELS[kind]
 }
 
 export const REQUIRED_PREVIEW_KINDS: GeneratedAssetKind[] = [

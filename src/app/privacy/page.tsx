@@ -4,13 +4,14 @@ import { ArrowLeft, ShieldCheck } from 'lucide-react'
 
 import { SiteFooter } from '@/components/landing/site-footer'
 import { SiteHeader } from '@/components/landing/site-header'
+import { createMarketingMetadata } from '@/lib/marketing/seo'
 
-export const metadata: Metadata = {
+export const metadata: Metadata = createMarketingMetadata({
   title: 'კონფიდენციალურობის პოლიტიკა | AutoPost',
   description:
     'როგორ აგროვებს და იყენებს AutoPost საკონტაქტო ინფორმაციასა და ავტომობილის ფოტოებს Preview-ს მოსამზადებლად.',
-  alternates: { canonical: '/privacy' },
-}
+  path: '/privacy',
+})
 
 export default function PrivacyPage() {
   const operator =
@@ -22,7 +23,7 @@ export default function PrivacyPage() {
 
   return (
     <>
-      <SiteHeader />
+      <SiteHeader languageHref="/en/privacy" />
       <main className="min-h-[70vh] py-16 sm:py-24">
         <article className="site-container max-w-4xl">
           <Link

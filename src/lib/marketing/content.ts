@@ -4,11 +4,21 @@ export const publicMarketingPages = [
   '/',
   '/en',
   '/examples',
+  '/en/examples',
   '/how-it-works',
+  '/en/how-it-works',
   '/pricing',
+  '/en/pricing',
   '/faq',
+  '/en/faq',
   '/about',
+  '/en/about',
   '/guides',
+  '/en/guides',
+  '/privacy',
+  '/en/privacy',
+  '/terms',
+  '/en/terms',
 ] as const
 
 export const frequentlyAskedQuestions = [

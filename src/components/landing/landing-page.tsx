@@ -9,6 +9,7 @@ import { SiteFooter } from '@/components/landing/site-footer'
 import { SiteHeader } from '@/components/landing/site-header'
 import { SubmissionSection } from '@/components/landing/submission-section'
 import { JsonLd } from '@/components/marketing/json-ld'
+import { getLocalizedCampaignAssets } from '@/lib/campaign-assets'
 import { getCampaignAssetSelection } from '@/lib/campaign-assets.server'
 import type { AppLocale } from '@/lib/i18n'
 import { getSiteUrl } from '@/lib/site-url'
@@ -21,6 +22,7 @@ export function LandingPage({ locale }: { locale: AppLocale }) {
   const phone = process.env.NEXT_PUBLIC_WHATSAPP_NUMBER?.trim()
   const facebook = process.env.NEXT_PUBLIC_FACEBOOK_URL?.trim()
   const campaign = getCampaignAssetSelection()
+  const assets = getLocalizedCampaignAssets(campaign.assets, locale)
   const pageUrl = english ? new URL('/en', siteUrl).toString() : siteUrl
 
   const structuredData = {
@@ -97,12 +99,12 @@ export function LandingPage({ locale }: { locale: AppLocale }) {
       <JsonLd data={structuredData} />
       <SiteHeader locale={locale} />
       <main>
-        <Hero assets={campaign.assets} locale={locale} />
-        <BeforeAfter assets={campaign.assets} locale={locale} />
-        <Deliverables assets={campaign.assets} locale={locale} />
+        <Hero assets={assets} locale={locale} />
+        <BeforeAfter assets={assets} locale={locale} />
+        <Deliverables assets={assets} locale={locale} />
         <HowItWorks locale={locale} />
         <Pricing locale={locale} />
-        {english ? null : <GuideTeasers />}
+        <GuideTeasers locale={locale} />
         <SubmissionSection locale={locale} />
       </main>
       <SiteFooter locale={locale} />

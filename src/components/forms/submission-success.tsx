@@ -47,6 +47,10 @@ export function SubmissionSuccess({
   const whatsappUrl = whatsappNumber
     ? supportUrl(whatsappNumber, publicReference, locale)
     : null
+  const localizedResultUrl =
+    locale === 'en'
+      ? `${resultUrl}${resultUrl.includes('?') ? '&' : '?'}lang=en`
+      : resultUrl
 
   useEffect(() => {
     return () => {
@@ -155,7 +159,7 @@ export function SubmissionSuccess({
       </div>
 
       <a
-        href={resultUrl}
+        href={localizedResultUrl}
         className="bg-amber text-graphite mt-6 inline-flex min-h-14 w-full items-center justify-center gap-2 px-5 text-sm font-extrabold transition-colors hover:bg-[#e1ff75]"
       >
         {english ? 'Open private results' : 'პირადი შედეგის გახსნა'}

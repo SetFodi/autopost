@@ -22,11 +22,13 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { ResultAssetCard } from '@/components/results/result-asset-card'
 import { ResultAssetDialog } from '@/components/results/result-asset-dialog'
 import { ResultCopyStudio } from '@/components/results/result-copy-studio'
+import { getResultCopy } from '@/components/results/result-copy'
 import { ResultEmptyOutput } from '@/components/results/result-empty-output'
 import { ResultImagePreview } from '@/components/results/result-image-preview'
 import { ResultSectionHeading } from '@/components/results/result-section-heading'
 import { REQUIRED_PREVIEW_KINDS } from '@/lib/fulfillment/result-assets'
 import type { ResultAsset, ResultSnapshot } from '@/lib/fulfillment/types'
+import type { AppLocale } from '@/lib/i18n'
 
 function isGenerating(status: ResultSnapshot['status']) {
   return ['queued', 'generating_preview', 'generating_paid'].includes(status)
@@ -36,11 +38,15 @@ export function ResultExperience({
   initialSnapshot,
   token,
   paymentReturn,
+  locale = 'ka',
 }: {
   initialSnapshot: ResultSnapshot
   token: string
   paymentReturn: boolean
+  locale?: AppLocale
 }) {
+  const copy = getResultCopy(locale)
+  const english = locale === 'en'
   const [snapshot, setSnapshot] = useState(initialSnapshot)
   const [checkoutBusy, setCheckoutBusy] = useState(false)
   const [message, setMessage] = useState<string | null>(null)
@@ -73,18 +79,14 @@ export function ResultExperience({
         { method: 'POST' },
       )
       if (!cancelled) {
-        setMessage(
-          response.ok
-            ? 'გადახდის სტატუსი განახლდა.'
-            : 'გადახდა მოწმდება — გვერდი ავტომატურად განახლდება.',
-        )
+        setMessage(response.ok ? copy.paymentUpdated : copy.paymentChecking)
         await refresh()
       }
     })()
     return () => {
       cancelled = true
     }
-  }, [paymentReturn, refresh, token])
+  }, [copy.paymentChecking, copy.paymentUpdated, paymentReturn, refresh, token])
 
   useEffect(() => {
     if (!isGenerating(snapshot.status)) return
@@ -98,7 +100,7 @@ export function ResultExperience({
     setMessage(null)
     try {
       const response = await fetch(
-        `/api/results/${encodeURIComponent(token)}/checkout`,
+        `/api/results/${encodeURIComponent(token)}/checkout${english ? '?lang=en' : ''}`,
         { method: 'POST' },
       )
       const payload = (await response.json()) as {
@@ -106,16 +108,19 @@ export function ResultExperience({
         error?: string
         paid?: boolean
       }
-      if (!response.ok) throw new Error(payload.error || 'გადახდა ვერ დაიწყო.')
+      if (!response.ok)
+        throw new Error(
+          english ? copy.checkoutFailed : payload.error || copy.checkoutFailed,
+        )
       if (payload.paid) {
         await refresh()
         return
       }
-      if (!payload.checkoutUrl) throw new Error('გადახდის ბმული ვერ მოიძებნა.')
+      if (!payload.checkoutUrl) throw new Error(copy.checkoutLinkMissing)
       window.location.assign(payload.checkoutUrl)
     } catch (error) {
       setMessage(
-        error instanceof Error ? error.message : 'გადახდა დროებით ვერ დაიწყო.',
+        error instanceof Error ? error.message : copy.checkoutTemporary,
       )
       setCheckoutBusy(false)
     }
@@ -162,19 +167,31 @@ export function ResultExperience({
 
       <header className="relative z-30 border-b border-white/10 bg-[#0c0b0a]/88 backdrop-blur-xl">
         <div className="site-container flex min-h-18 items-center justify-between gap-5">
-          <Link href="/" className="group flex items-center gap-3">
+          <Link href={copy.home} className="group flex items-center gap-3">
             <span className="brand-mark">AP</span>
             <span className="text-base font-extrabold tracking-[-0.04em] sm:text-lg">
               AutoPost
             </span>
           </Link>
           <div className="flex items-center gap-3">
+            <Link
+              href={
+                english
+                  ? `/result/${encodeURIComponent(token)}`
+                  : `/result/${encodeURIComponent(token)}?lang=en`
+              }
+              hrefLang={english ? 'ka' : 'en'}
+              className="text-ivory/55 hover:border-amber/45 hover:text-amber grid min-h-10 min-w-10 place-items-center border border-white/10 font-mono text-[9px] font-bold tracking-[0.12em]"
+              aria-label={english ? 'ქართული ვერსია' : 'Open English version'}
+            >
+              {english ? 'KA' : 'EN'}
+            </Link>
             <span className="text-ivory/40 hidden font-mono text-[9px] tracking-[0.13em] uppercase sm:inline">
-              Private content studio
+              {copy.studio}
             </span>
             <span className="flex items-center gap-2 border border-white/10 px-3 py-2 font-mono text-[9px] tracking-[0.12em] uppercase">
               <span className="bg-amber size-1.5 rounded-full shadow-[0_0_0_4px_rgb(232_160_58/0.1)]" />
-              {usePaidAssets ? 'Clean files' : 'Preview mode'}
+              {usePaidAssets ? copy.cleanFiles : copy.previewMode}
             </span>
           </div>
         </div>
@@ -184,11 +201,18 @@ export function ResultExperience({
         <section className="grid gap-8 border-b border-white/10 pb-10 lg:grid-cols-[minmax(0,1fr)_23rem] lg:items-end">
           <div>
             <p className="text-amber font-mono text-[10px] tracking-[0.2em] uppercase">
-              {snapshot.publicReference} · Result desk
+              {snapshot.publicReference} · {copy.resultDesk}
             </p>
             <h1 className="font-display mt-5 max-w-4xl text-[clamp(2.7rem,7vw,6rem)] leading-[0.92] font-black tracking-[-0.065em]">
-              შენი კონტენტ-
-              <span className="text-amber">პაკეტი</span>
+              {english ? (
+                <>
+                  Your content <span className="text-amber">kit</span>
+                </>
+              ) : (
+                <>
+                  შენი კონტენტ-<span className="text-amber">პაკეტი</span>
+                </>
+              )}
             </h1>
             <div className="mt-6 flex flex-wrap items-center gap-x-4 gap-y-2">
               <p className="text-lg font-bold sm:text-xl">
@@ -198,7 +222,7 @@ export function ResultExperience({
               <p className="text-ivory/45 text-sm">{snapshot.vehicleYear}</p>
               <span className="text-ivory/20">/</span>
               <p className="text-ivory/45 text-sm">
-                {visualAssets.length} ვიზუალური მასალა
+                {copy.visualAssets(visualAssets.length)}
               </p>
             </div>
           </div>
@@ -224,16 +248,14 @@ export function ResultExperience({
               <div className="min-w-0 flex-1">
                 <p className="text-sm font-bold">
                   {snapshot.status === 'ready'
-                    ? 'სრული პაკეტი მზადაა'
+                    ? copy.ready
                     : snapshot.status === 'preview_ready'
-                      ? 'Preview მზადაა'
+                      ? copy.previewReady
                       : snapshot.status === 'failed'
-                        ? 'დამუშავებას ხელახლა ვცდით'
-                        : 'AutoPost ამზადებს მასალებს'}
+                        ? copy.retrying
+                        : copy.generating}
                 </p>
-                <p className="text-ivory/35 mt-1 text-xs">
-                  გვერდი ავტომატურად განახლდება
-                </p>
+                <p className="text-ivory/35 mt-1 text-xs">{copy.autoRefresh}</p>
               </div>
               <span className="text-amber font-mono text-xs">
                 {readyCount}/{REQUIRED_PREVIEW_KINDS.length}
@@ -258,7 +280,7 @@ export function ResultExperience({
 
         <nav
           className="result-scroll sticky top-0 z-20 -mx-4 mt-6 flex gap-2 overflow-x-auto border-y border-white/10 bg-[#0c0b0a]/92 px-4 py-3 backdrop-blur-xl sm:mx-0 sm:px-0"
-          aria-label="შედეგების სექციები"
+          aria-label={copy.sectionNav}
         >
           {[
             ['#video', Film, 'Reel', reel ? '1' : '0'],
@@ -292,8 +314,8 @@ export function ResultExperience({
             <ResultSectionHeading
               number="01"
               eyebrow="Motion output"
-              title="Reel ვიდეო"
-              description="9:16 ვიდეო პირდაპირ აქვე ნახე — სრული კადრები, რბილი მოძრაობა და მობილურისთვის მზად ფორმატი."
+              title={copy.reelTitle}
+              description={copy.reelDescription}
               count={reel ? '1 VIDEO · 9:16' : 'PROCESSING'}
               icon={Film}
             />
@@ -314,12 +336,10 @@ export function ResultExperience({
                       Video / Social ready
                     </p>
                     <h3 className="font-display mt-4 text-3xl font-black tracking-[-0.05em] sm:text-4xl">
-                      ნახე მოძრაობაში
+                      {copy.motionTitle}
                     </h3>
                     <p className="text-ivory/45 mt-4 max-w-xl text-sm leading-7">
-                      Play ღილაკით შეაფასე მთელი ვიდეო. დიდ ფანჯარაში გახსნისას
-                      შეგიძლია სრულ ეკრანზეც ნახო, ხოლო ჩამოტვირთვა ცალკე
-                      ღილაკიდანაა ხელმისაწვდომი.
+                      {copy.motionDescription}
                     </p>
                     <div className="mt-7 grid gap-3 sm:grid-cols-2">
                       {[
@@ -344,7 +364,7 @@ export function ResultExperience({
                       className="bg-amber text-graphite inline-flex min-h-12 items-center gap-2 px-4 text-xs font-black transition hover:bg-[#ffbe5c]"
                     >
                       <Maximize2 className="size-4" aria-hidden="true" />
-                      დიდ ფანჯარაში ნახვა
+                      {copy.enlarge}
                     </button>
                     <a
                       href={reel.url}
@@ -356,13 +376,13 @@ export function ResultExperience({
                         className="text-amber size-4"
                         aria-hidden="true"
                       />
-                      ვიდეოს ჩამოტვირთვა
+                      {copy.downloadVideo}
                     </a>
                   </div>
                 </div>
               </div>
             ) : (
-              <ResultEmptyOutput label="Reel ვიდეო" />
+              <ResultEmptyOutput label={copy.reelTitle} locale={locale} />
             )}
           </section>
 
@@ -374,7 +394,7 @@ export function ResultExperience({
               number="02"
               eyebrow="Vertical set"
               title="Instagram Stories"
-              description="სამი ვერტიკალური Story ცალკე სერიად — თითოეულზე დაჭერით იხსნება სუფთა, სრული preview."
+              description={copy.storiesDescription}
               count={`${stories.length} / 3 STORIES`}
               icon={Smartphone}
             />
@@ -386,6 +406,7 @@ export function ResultExperience({
                     asset={asset}
                     index={index}
                     variant="story"
+                    locale={locale}
                     onOpen={() => openAsset(asset, stories)}
                   />
                 ))}
@@ -400,7 +421,7 @@ export function ResultExperience({
                 </div>
               </div>
             ) : (
-              <ResultEmptyOutput label="Stories" />
+              <ResultEmptyOutput label="Stories" locale={locale} />
             )}
           </section>
 
@@ -411,8 +432,8 @@ export function ResultExperience({
             <ResultSectionHeading
               number="03"
               eyebrow="Swipe gallery"
-              title="Carousel პოსტები"
-              description="ექვსი თანმიმდევრული 1:1 სლაიდი ერთ ხაზში — გვერდი მოკლე რჩება, სერია კი მარტივად დასათვალიერებელია."
+              title={copy.carouselTitle}
+              description={copy.carouselDescription}
               count={`${carousel.length} / 6 SLIDES`}
               icon={Images}
             />
@@ -424,12 +445,13 @@ export function ResultExperience({
                     asset={asset}
                     index={index}
                     variant="square"
+                    locale={locale}
                     onOpen={() => openAsset(asset, carousel)}
                   />
                 ))}
               </div>
             ) : (
-              <ResultEmptyOutput label="Carousel" />
+              <ResultEmptyOutput label="Carousel" locale={locale} />
             )}
           </section>
 
@@ -441,7 +463,7 @@ export function ResultExperience({
               number="04"
               eyebrow="Feed output"
               title="Instagram Post"
-              description="მთავარი 1:1 განცხადება Feed-ისთვის — ერთი მკაფიო კადრი, ფასი და საკონტაქტო ინფორმაცია."
+              description={copy.postDescription}
               count={square ? '1 POST · 1:1' : 'PROCESSING'}
               icon={Square}
             />
@@ -451,7 +473,7 @@ export function ResultExperience({
                   type="button"
                   onClick={() => openAsset(square, [square])}
                   className="group relative aspect-square overflow-hidden border-b border-white/10 bg-black/30 lg:border-r lg:border-b-0"
-                  aria-label="Instagram Post-ის დიდ ფანჯარაში გახსნა"
+                  aria-label={copy.postOpen}
                   aria-haspopup="dialog"
                 >
                   <ResultImagePreview
@@ -468,12 +490,10 @@ export function ResultExperience({
                       Primary feed creative
                     </p>
                     <h3 className="font-display mt-4 text-3xl font-black tracking-[-0.05em] sm:text-4xl">
-                      მთავარი გასაყიდი კადრი
+                      {copy.postTitle}
                     </h3>
                     <p className="text-ivory/45 mt-4 max-w-xl text-sm leading-7">
-                      სრული ფოტო ყოველთვის ჩანს; განსხვავებული პროპორციები რბილი
-                      ფონით ივსება და მანქანის მნიშვნელოვანი დეტალები აღარ
-                      იჭრება.
+                      {copy.postBody}
                     </p>
                   </div>
                   <a
@@ -483,12 +503,12 @@ export function ResultExperience({
                     className="bg-amber text-graphite mt-8 inline-flex min-h-12 w-fit items-center gap-2 px-4 text-xs font-black transition hover:bg-[#ffbe5c]"
                   >
                     <Download className="size-4" aria-hidden="true" />
-                    Post-ის ჩამოტვირთვა
+                    {copy.downloadPost}
                   </a>
                 </div>
               </div>
             ) : (
-              <ResultEmptyOutput label="Instagram Post" />
+              <ResultEmptyOutput label="Instagram Post" locale={locale} />
             )}
           </section>
 
@@ -499,12 +519,12 @@ export function ResultExperience({
             <ResultSectionHeading
               number="05"
               eyebrow="Sales caption"
-              title="ტექსტი სამ ენაზე"
-              description="არავითარი .txt ფაილის ძებნა — აირჩიე ენა, წაიკითხე და ერთი ღილაკით დააკოპირე."
+              title={copy.copyTitle}
+              description={copy.copyDescription}
               count="KA · EN · RU"
               icon={Clipboard}
             />
-            <ResultCopyStudio copyText={snapshot.copyText} />
+            <ResultCopyStudio copyText={snapshot.copyText} locale={locale} />
           </section>
         </div>
 
@@ -515,13 +535,11 @@ export function ResultExperience({
                 Publish-ready package
               </p>
               <h2 className="font-display mt-4 max-w-3xl text-4xl font-black tracking-[-0.055em] sm:text-5xl">
-                {snapshot.paid
-                  ? 'სუფთა ფაილები შენია'
-                  : 'მოგწონს? აიღე სრული პაკეტი'}
+                {snapshot.paid ? copy.paidHeading : copy.upsellHeading}
               </h2>
               <div className="mt-7 grid gap-3 text-sm sm:grid-cols-2 lg:max-w-3xl">
                 {[
-                  [Film, '1× Reel ვიდეო'],
+                  [Film, copy.reelItem],
                   [Smartphone, '3× Instagram Story'],
                   [Images, '6× Carousel slide'],
                   [Clipboard, 'KA / EN / RU copy'],
@@ -549,7 +567,7 @@ export function ResultExperience({
                   <div className="flex items-center gap-3 text-emerald-300">
                     <ShieldCheck className="size-5" aria-hidden="true" />
                     <span className="text-sm font-bold">
-                      გადახდა დადასტურებულია
+                      {copy.paidConfirmed}
                     </span>
                   </div>
                   {packageReady && packageAsset ? (
@@ -560,7 +578,7 @@ export function ResultExperience({
                       className="bg-amber text-graphite mt-7 flex min-h-14 w-full items-center justify-center gap-2 px-5 text-sm font-black transition hover:bg-[#ffbe5c]"
                     >
                       <PackageCheck className="size-4" aria-hidden="true" />
-                      სრული ZIP პაკეტის ჩამოტვირთვა
+                      {copy.downloadPackage}
                     </a>
                   ) : (
                     <div className="text-ivory/50 mt-7 flex items-center gap-3 border border-white/10 p-4 text-sm">
@@ -568,7 +586,7 @@ export function ResultExperience({
                         className="size-4 animate-spin"
                         aria-hidden="true"
                       />
-                      სუფთა ფაილები ავტომატურად იქმნება
+                      {copy.generatingClean}
                     </div>
                   )}
                 </>
@@ -583,8 +601,7 @@ export function ResultExperience({
                     </span>
                   </div>
                   <p className="text-ivory/45 mt-3 text-sm leading-6">
-                    ერთჯერადი გადახდა. სუფთა ფაილები ამავე გვერდზე ავტომატურად
-                    გაიხსნება.
+                    {copy.oneTimePayment}
                   </p>
                   <button
                     type="button"
@@ -605,13 +622,13 @@ export function ResultExperience({
                       <LockKeyhole className="size-4" aria-hidden="true" />
                     )}
                     {!snapshot.checkoutAvailable
-                      ? 'გადახდა მალე გააქტიურდება'
+                      ? copy.paymentSoon
                       : previewReady
-                        ? 'გადახდა და სრული პაკეტის მიღება'
-                        : 'ჯერ დაელოდე Preview-ს'}
+                        ? copy.payAndUnlock
+                        : copy.waitForPreview}
                   </button>
                   <p className="text-ivory/25 mt-3 text-center text-[10px]">
-                    უსაფრთხო გადახდა TBC Checkout-ით
+                    {copy.secureTbc}
                   </p>
                 </>
               )}
@@ -625,6 +642,7 @@ export function ResultExperience({
         assets={activeAssetGroup}
         onClose={() => setActiveAsset(null)}
         onSelect={setActiveAsset}
+        locale={locale}
       />
     </main>
   )

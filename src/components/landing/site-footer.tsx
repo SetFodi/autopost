@@ -2,7 +2,7 @@ import Link from 'next/link'
 import { ExternalLink, MessageCircle } from 'lucide-react'
 
 import { TrackedWhatsappLink } from '@/components/landing/tracked-whatsapp-link'
-import { localizedSection, type AppLocale } from '@/lib/i18n'
+import { localizedMarketingPath, type AppLocale } from '@/lib/i18n'
 
 function whatsappHref(phone: string) {
   const normalized = phone.replace(/\D/g, '')
@@ -50,37 +50,28 @@ export function SiteFooter({ locale = 'ka' }: { locale?: AppLocale }) {
               >
                 <Link
                   className="nav-link"
-                  href={
-                    english
-                      ? localizedSection(locale, 'transformation')
-                      : '/examples'
-                  }
+                  href={localizedMarketingPath(locale, 'examples')}
                 >
                   {english ? 'Examples' : 'მაგალითები'}
                 </Link>
                 <Link
                   className="nav-link"
-                  href={
-                    english
-                      ? localizedSection(locale, 'how-it-works')
-                      : '/how-it-works'
-                  }
+                  href={localizedMarketingPath(locale, 'howItWorks')}
                 >
                   {english ? 'How it works' : 'როგორ მუშაობს'}
                 </Link>
                 <Link
                   className="nav-link"
-                  href={
-                    english ? localizedSection(locale, 'pricing') : '/pricing'
-                  }
+                  href={localizedMarketingPath(locale, 'pricing')}
                 >
                   {english ? 'Pricing' : 'ფასი'}
                 </Link>
-                {english ? null : (
-                  <Link className="nav-link" href="/faq">
-                    კითხვები
-                  </Link>
-                )}
+                <Link
+                  className="nav-link"
+                  href={localizedMarketingPath(locale, 'faq')}
+                >
+                  {english ? 'FAQ' : 'კითხვები'}
+                </Link>
               </nav>
             </div>
             <div>
@@ -91,17 +82,29 @@ export function SiteFooter({ locale = 'ka' }: { locale?: AppLocale }) {
                 aria-label={english ? 'Legal pages' : 'სამართლებრივი გვერდები'}
                 className="text-ivory/58 mt-4 flex flex-col items-start gap-3 text-sm"
               >
-                <Link className="nav-link" href="/privacy">
+                <Link
+                  className="nav-link"
+                  href={localizedMarketingPath(locale, 'privacy')}
+                >
                   {english ? 'Privacy policy' : 'კონფიდენციალურობა'}
                 </Link>
-                <Link className="nav-link" href="/terms">
+                <Link
+                  className="nav-link"
+                  href={localizedMarketingPath(locale, 'terms')}
+                >
                   {english ? 'Terms and conditions' : 'წესები და პირობები'}
                 </Link>
-                <Link className="nav-link" href="/about">
+                <Link
+                  className="nav-link"
+                  href={localizedMarketingPath(locale, 'about')}
+                >
                   {english ? 'About us' : 'ჩვენს შესახებ'}
                 </Link>
-                <Link className="nav-link" href="/guides">
-                  {english ? 'Guides (Georgian)' : 'გზამკვლევები'}
+                <Link
+                  className="nav-link"
+                  href={localizedMarketingPath(locale, 'guides')}
+                >
+                  {english ? 'Car-selling guides' : 'გზამკვლევები'}
                 </Link>
               </nav>
             </div>

@@ -4,6 +4,7 @@ import { Check, Clipboard, LoaderCircle } from 'lucide-react'
 import { useEffect, useMemo, useRef, useState } from 'react'
 
 import { parseResultCopy } from '@/lib/fulfillment/result-copy'
+import type { AppLocale } from '@/lib/i18n'
 
 async function copyToClipboard(value: string) {
   if (navigator.clipboard?.writeText) {
@@ -22,9 +23,19 @@ async function copyToClipboard(value: string) {
   if (!copied) throw new Error('clipboard_unavailable')
 }
 
-export function ResultCopyStudio({ copyText }: { copyText: string | null }) {
+export function ResultCopyStudio({
+  copyText,
+  locale = 'ka',
+}: {
+  copyText: string | null
+  locale?: AppLocale
+}) {
+  const english = locale === 'en'
+  const copySuccess = english ? 'Text copied' : 'ტექსტი დაკოპირდა'
   const languages = useMemo(() => parseResultCopy(copyText ?? ''), [copyText])
-  const [activeId, setActiveId] = useState<string>('ka')
+  const [activeId, setActiveId] = useState<string>(
+    locale === 'en' ? 'en' : 'ka',
+  )
   const [feedback, setFeedback] = useState('')
   const feedbackTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const activeLanguage =
@@ -40,11 +51,11 @@ export function ResultCopyStudio({ copyText }: { copyText: string | null }) {
   async function handleCopy(value: string) {
     try {
       await copyToClipboard(value)
-      setFeedback('ტექსტი დაკოპირდა')
+      setFeedback(copySuccess)
       if (feedbackTimerRef.current) clearTimeout(feedbackTimerRef.current)
       feedbackTimerRef.current = setTimeout(() => setFeedback(''), 1_800)
     } catch {
-      setFeedback('კოპირება ვერ მოხერხდა')
+      setFeedback(english ? 'Could not copy the text' : 'კოპირება ვერ მოხერხდა')
     }
   }
 
@@ -52,7 +63,7 @@ export function ResultCopyStudio({ copyText }: { copyText: string | null }) {
     <div className="grid gap-0 lg:grid-cols-[13rem_1fr]">
       <div className="border-b border-white/10 bg-black/20 p-4 lg:border-r lg:border-b-0 lg:p-5">
         <p className="text-ivory/35 font-mono text-[9px] tracking-[0.15em] uppercase">
-          აირჩიე ენა
+          {english ? 'Choose a language' : 'აირჩიე ენა'}
         </p>
         <div className="mt-3 flex gap-2 lg:flex-col">
           {languages.length > 0
@@ -91,7 +102,8 @@ export function ResultCopyStudio({ copyText }: { copyText: string | null }) {
               Ready to paste
             </p>
             <p className="mt-1 text-sm font-bold">
-              {activeLanguage?.label ?? 'Caption მზადდება'}
+              {activeLanguage?.label ??
+                (english ? 'Caption is processing' : 'Caption მზადდება')}
             </p>
           </div>
           <button
@@ -101,15 +113,21 @@ export function ResultCopyStudio({ copyText }: { copyText: string | null }) {
             }
             disabled={!activeLanguage}
             className="text-amber hover:bg-amber hover:text-graphite inline-flex min-h-11 shrink-0 items-center gap-2 border border-current px-3 text-xs font-bold transition-colors disabled:cursor-not-allowed disabled:opacity-30"
-            aria-label="ტექსტის კოპირება"
+            aria-label={english ? 'Copy caption' : 'ტექსტის კოპირება'}
           >
-            {feedback === 'ტექსტი დაკოპირდა' ? (
+            {feedback === copySuccess ? (
               <Check className="size-4" aria-hidden="true" />
             ) : (
               <Clipboard className="size-4" aria-hidden="true" />
             )}
             <span className="hidden sm:inline">
-              {feedback === 'ტექსტი დაკოპირდა' ? 'დაკოპირდა' : 'კოპირება'}
+              {feedback === copySuccess
+                ? english
+                  ? 'Copied'
+                  : 'დაკოპირდა'
+                : english
+                  ? 'Copy'
+                  : 'კოპირება'}
             </span>
           </button>
         </div>
@@ -125,12 +143,17 @@ export function ResultCopyStudio({ copyText }: { copyText: string | null }) {
                 className="size-4 animate-spin"
                 aria-hidden="true"
               />
-              გაყიდვის ტექსტი მზადდება
+              {english
+                ? 'Sales copy is processing'
+                : 'გაყიდვის ტექსტი მზადდება'}
             </div>
           )}
         </div>
         <p aria-live="polite" className="text-ivory/35 mt-3 min-h-4 text-xs">
-          {feedback || 'ღილაკი აკოპირებს მხოლოდ არჩეულ ენას.'}
+          {feedback ||
+            (english
+              ? 'The button copies only the selected language.'
+              : 'ღილაკი აკოპირებს მხოლოდ არჩეულ ენას.')}
         </p>
       </div>
     </div>

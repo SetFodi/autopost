@@ -25,6 +25,7 @@ export async function POST(
   request: Request,
   context: { params: Promise<{ token: string }> },
 ) {
+  const english = new URL(request.url).searchParams.get('lang') === 'en'
   const { token } = await context.params
   const submissionId = verifyResultToken(token)
   if (!submissionId) {
@@ -190,6 +191,7 @@ export async function POST(
   try {
     const resultUrl = getResultUrl(submissionId)
     resultUrl.searchParams.set('payment', 'return')
+    if (english) resultUrl.searchParams.set('lang', 'en')
     const callbackUrl = new URL('/api/payments/tbc/callback', getSiteUrl())
     const created = await createTbcPayment({
       callbackUrl: callbackUrl.toString(),

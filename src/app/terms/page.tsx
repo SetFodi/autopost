@@ -4,13 +4,14 @@ import { ArrowLeft, FileCheck2 } from 'lucide-react'
 
 import { SiteFooter } from '@/components/landing/site-footer'
 import { SiteHeader } from '@/components/landing/site-header'
+import { createMarketingMetadata } from '@/lib/marketing/seo'
 
-export const metadata: Metadata = {
+export const metadata: Metadata = createMarketingMetadata({
   title: 'წესები და პირობები | AutoPost',
   description:
     'AutoPost-ის უფასო Preview-სა და 14.90₾-იანი სრული პაკეტის ძირითადი პირობები.',
-  alternates: { canonical: '/terms' },
-}
+  path: '/terms',
+})
 
 export default function TermsPage() {
   const operator =
@@ -23,7 +24,7 @@ export default function TermsPage() {
 
   return (
     <>
-      <SiteHeader />
+      <SiteHeader languageHref="/en/terms" />
       <main className="min-h-[70vh] py-16 sm:py-24">
         <article className="site-container max-w-4xl">
           <Link
