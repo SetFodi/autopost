@@ -8,69 +8,129 @@ import {
 } from 'lucide-react'
 
 import type { CampaignAssetSet } from '@/lib/campaign-assets'
+import type { AppLocale } from '@/lib/i18n'
 
-export function Deliverables({ assets }: { assets: CampaignAssetSet }) {
-  const deliverables = [
-    {
-      format: '9:16 · 15–20 წმ',
-      title: 'პროფესიონალური Reel',
-      description:
-        '15–20 წამიანი ვერტიკალური ვიდეო მანქანის ფოტოებით, ფასით, ძირითადი მონაცემებითა და საკონტაქტო ინფორმაციით.',
-      icon: Video,
-      asset: assets.reel,
-      /** Card spans natural portrait column */
-      colClass: '',
-    },
-    {
-      format: '3 × 9:16',
-      title: 'Story დიზაინები',
-      description: 'სამი 9:16 ფორმატის Story, პირდაპირ გამოსაქვეყნებლად.',
-      icon: PanelsTopLeft,
-      asset: assets.story,
-      colClass: '',
-    },
-    {
-      format: '6 სლაიდი',
-      title: 'Carousel',
-      description:
-        'გადასაფურცლი დიზაინები მთავარი ფოტოთი, ფასით, ტექნიკური მონაცემებითა და კონტაქტით.',
-      icon: GalleryHorizontal,
-      asset: assets.carousel,
-      colClass: '',
-    },
-    {
-      format: '1:1',
-      title: 'კვადრატული ბარათი',
-      description:
-        '1:1 დიზაინი Marketplace-ის, MyAuto-სა და სოციალური ქსელების მთავარი ფოტოსთვის.',
-      icon: LayoutPanelTop,
-      asset: assets.card,
-      colClass: '',
-    },
-    {
-      format: 'KA · EN · RU',
-      title: 'ტექსტი სამ ენაზე',
-      description:
-        'გაყიდვისთვის მომზადებული აღწერა ქართულ, ინგლისურ და რუსულ ენებზე.',
-      icon: Languages,
-      asset: null,
-      colClass: 'sm:col-span-2 lg:col-span-1',
-    },
-  ] as const
+export function Deliverables({
+  assets,
+  locale = 'ka',
+}: {
+  assets: CampaignAssetSet
+  locale?: AppLocale
+}) {
+  const english = locale === 'en'
+  const deliverables = english
+    ? [
+        {
+          format: '9:16 · 15–20 sec',
+          title: 'Professional Reel',
+          description:
+            'A short vertical video built from your photos, price, key details, and contact information.',
+          icon: Video,
+          asset: assets.reel,
+          colClass: '',
+        },
+        {
+          format: '3 × 9:16',
+          title: 'Story designs',
+          description: 'Three vertical Stories, ready to publish.',
+          icon: PanelsTopLeft,
+          asset: assets.story,
+          colClass: '',
+        },
+        {
+          format: '6 slides',
+          title: 'Carousel',
+          description:
+            'A swipeable set with the main photo, price, technical details, and contact information.',
+          icon: GalleryHorizontal,
+          asset: assets.carousel,
+          colClass: '',
+        },
+        {
+          format: '1:1',
+          title: 'Square listing card',
+          description:
+            'A strong cover image for Marketplace, MyAuto, and social media.',
+          icon: LayoutPanelTop,
+          asset: assets.card,
+          colClass: '',
+        },
+        {
+          format: 'KA · EN · RU',
+          title: 'Copy in three languages',
+          description:
+            'Sales-ready listing copy in Georgian, English, and Russian.',
+          icon: Languages,
+          asset: null,
+          colClass: 'sm:col-span-2 lg:col-span-1',
+        },
+      ]
+    : [
+        {
+          format: '9:16 · 15–20 წმ',
+          title: 'პროფესიონალური Reel',
+          description:
+            '15–20 წამიანი ვერტიკალური ვიდეო მანქანის ფოტოებით, ფასით, ძირითადი მონაცემებითა და საკონტაქტო ინფორმაციით.',
+          icon: Video,
+          asset: assets.reel,
+          /** Card spans natural portrait column */
+          colClass: '',
+        },
+        {
+          format: '3 × 9:16',
+          title: 'Story დიზაინები',
+          description: 'სამი 9:16 ფორმატის Story, პირდაპირ გამოსაქვეყნებლად.',
+          icon: PanelsTopLeft,
+          asset: assets.story,
+          colClass: '',
+        },
+        {
+          format: '6 სლაიდი',
+          title: 'Carousel',
+          description:
+            'გადასაფურცლი დიზაინები მთავარი ფოტოთი, ფასით, ტექნიკური მონაცემებითა და კონტაქტით.',
+          icon: GalleryHorizontal,
+          asset: assets.carousel,
+          colClass: '',
+        },
+        {
+          format: '1:1',
+          title: 'კვადრატული ბარათი',
+          description:
+            '1:1 დიზაინი Marketplace-ის, MyAuto-სა და სოციალური ქსელების მთავარი ფოტოსთვის.',
+          icon: LayoutPanelTop,
+          asset: assets.card,
+          colClass: '',
+        },
+        {
+          format: 'KA · EN · RU',
+          title: 'ტექსტი სამ ენაზე',
+          description:
+            'გაყიდვისთვის მომზადებული აღწერა ქართულ, ინგლისურ და რუსულ ენებზე.',
+          icon: Languages,
+          asset: null,
+          colClass: 'sm:col-span-2 lg:col-span-1',
+        },
+      ]
 
   return (
     <section id="deliverables" className="py-16 sm:py-24 lg:py-28">
       <div className="site-container">
         <div className="grid gap-6 lg:grid-cols-[1fr_0.85fr] lg:items-end">
           <div>
-            <p className="section-kicker">რას მიიღებ</p>
+            <p className="section-kicker">
+              {english ? 'WHAT YOU GET' : 'რას მიიღებ'}
+            </p>
             <h2 className="font-display section-title max-w-2xl">
-              ერთი ატვირთვა. ხუთი მზა ფორმატი.
+              {english
+                ? 'One upload. Five ready-to-post formats.'
+                : 'ერთი ატვირთვა. ხუთი მზა ფორმატი.'}
             </h2>
           </div>
           <p className="text-ivory/52 max-w-md text-base leading-8 lg:justify-self-end">
-            ყველა ფაილი მზადდება შენი მანქანის რეალური ფოტოებისა და მონაცემების
-            მიხედვით — გამოსაქვეყნებლად გამზადებული ზომებით.
+            {english
+              ? 'Every file is built around your actual vehicle photos and information, in the right dimensions for each channel.'
+              : 'ყველა ფაილი მზადდება შენი მანქანის რეალური ფოტოებისა და მონაცემების მიხედვით — გამოსაქვეყნებლად გამზადებული ზომებით.'}
           </p>
         </div>
 
@@ -149,9 +209,12 @@ export function Deliverables({ assets }: { assets: CampaignAssetSet }) {
         </ul>
 
         <div className="border-amber/40 bg-amber/[0.05] text-ivory/65 mt-6 border-l-2 px-5 py-4 text-sm leading-7 sm:px-6">
-          <strong className="text-ivory font-semibold">მნიშვნელოვანია:</strong>{' '}
-          AutoPost ამ ეტაპზე მომხმარებლის ნაცვლად არაფერს აქვეყნებს. იღებ მზა
-          ფაილებს და თვითონ განათავსებ სასურველ პლატფორმაზე.
+          <strong className="text-ivory font-semibold">
+            {english ? 'Important:' : 'მნიშვნელოვანია:'}
+          </strong>{' '}
+          {english
+            ? 'AutoPost prepares the files but does not publish on your behalf. You decide where and when to post them.'
+            : 'AutoPost ამ ეტაპზე მომხმარებლის ნაცვლად არაფერს აქვეყნებს. იღებ მზა ფაილებს და თვითონ განათავსებ სასურველ პლატფორმაზე.'}
         </div>
       </div>
     </section>

@@ -1,7 +1,8 @@
-export const MARKETING_CONTENT_UPDATED_AT = '2026-07-14'
+export const MARKETING_CONTENT_UPDATED_AT = '2026-07-19'
 
 export const publicMarketingPages = [
   '/',
+  '/en',
   '/examples',
   '/how-it-works',
   '/pricing',

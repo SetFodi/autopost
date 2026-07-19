@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useRef, useState, type FormEvent } from 'react'
+import { useEffect, useMemo, useRef, useState, type FormEvent } from 'react'
 import { standardSchemaResolver } from '@hookform/resolvers/standard-schema'
 import {
   AlertCircle,
@@ -25,9 +25,10 @@ import {
   withReliableMimeType,
 } from '@/components/forms/photo-utils'
 import {
-  publicSubmissionFormSchema,
+  createPublicSubmissionFormSchema,
   type PublicSubmissionFormValues,
 } from '@/components/forms/submission-form-schema'
+import { getSubmissionFormCopy } from '@/components/forms/submission-form-copy'
 import { SubmissionSuccess } from '@/components/forms/submission-success'
 import { trackInternalEvent } from '@/lib/analytics/client'
 import {
@@ -35,6 +36,7 @@ import {
   trackMetaLeadOnce,
 } from '@/lib/analytics/meta-pixel'
 import { getCampaignAttribution } from '@/lib/analytics/attribution'
+import type { AppLocale } from '@/lib/i18n'
 import { createBrowserSupabaseClient } from '@/lib/supabase/client'
 import { normalizeGeorgianPhone } from '@/lib/validation/phone'
 import {
@@ -84,6 +86,7 @@ interface SuccessDetails {
 
 interface SubmissionFormProps {
   whatsappNumber?: string
+  locale?: AppLocale
 }
 
 class SubmissionError extends Error {}
@@ -113,14 +116,17 @@ function numericValue(value: string) {
   return Number(value.replace(/[\s,]/g, ''))
 }
 
-function genericResponseMessage(status: number) {
-  if (status === 429)
-    return 'ცოტა ხანში კიდევ სცადე. ამ ნომრიდან ბევრი მოთხოვნა დაფიქსირდა.'
-  if (status === 413) return 'ფოტოების ზომა დასაშვებ ზღვარს აჭარბებს.'
-  return 'განაცხადის გაგზავნა დროებით ვერ მოხერხდა. შეყვანილი ინფორმაცია ფორმაში დარჩა — გთხოვ, ხელახლა სცადო.'
+function genericResponseMessage(status: number, locale: AppLocale) {
+  const copy = getSubmissionFormCopy(locale)
+  if (status === 429) return copy.response429
+  if (status === 413) return copy.response413
+  return copy.responseGeneric
 }
 
-async function parseSuccessfulResponse<T>(response: Response): Promise<T> {
+async function parseSuccessfulResponse<T>(
+  response: Response,
+  locale: AppLocale,
+): Promise<T> {
   if (!response.ok) {
     try {
       const payload = (await response.json()) as {
@@ -132,13 +138,17 @@ async function parseSuccessfulResponse<T>(response: Response): Promise<T> {
           payload.code === 'INTAKE_CAPACITY_EXCEEDED') &&
         typeof payload.error === 'string'
       ) {
-        throw new SubmissionError(payload.error)
+        throw new SubmissionError(
+          locale === 'ka'
+            ? payload.error
+            : getSubmissionFormCopy(locale).responseGeneric,
+        )
       }
     } catch (error) {
       if (error instanceof SubmissionError) throw error
     }
 
-    throw new SubmissionError(genericResponseMessage(response.status))
+    throw new SubmissionError(genericResponseMessage(response.status, locale))
   }
   try {
     return (await response.json()) as T
@@ -166,7 +176,15 @@ function isValidInitResponse(value: InitResponse, photoCount: number) {
   )
 }
 
-export function SubmissionForm({ whatsappNumber }: SubmissionFormProps) {
+export function SubmissionForm({
+  whatsappNumber,
+  locale = 'ka',
+}: SubmissionFormProps) {
+  const copy = getSubmissionFormCopy(locale)
+  const formSchema = useMemo(
+    () => createPublicSubmissionFormSchema(locale),
+    [locale],
+  )
   const [photos, setPhotos] = useState<SelectedPhoto[]>([])
   const [phase, setPhase] = useState<SubmissionPhase>('idle')
   const [photoError, setPhotoError] = useState<string | null>(null)
@@ -187,7 +205,7 @@ export function SubmissionForm({ whatsappNumber }: SubmissionFormProps) {
     handleSubmit,
     formState: { errors },
   } = useForm<PublicSubmissionFormValues>({
-    resolver: standardSchemaResolver(publicSubmissionFormSchema),
+    resolver: standardSchemaResolver(formSchema),
     defaultValues,
     mode: 'onBlur',
   })
@@ -217,7 +235,9 @@ export function SubmissionForm({ whatsappNumber }: SubmissionFormProps) {
     if (formStartedRef.current) return
     formStartedRef.current = true
     trackMetaFormStarted()
-    trackInternalEvent('form_started', { metadata: { source: 'landing_form' } })
+    trackInternalEvent('form_started', {
+      metadata: { source: 'landing_form', locale },
+    })
   }
 
   function invalidateRecoverableAttempt() {
@@ -259,17 +279,17 @@ export function SubmissionForm({ whatsappNumber }: SubmissionFormProps) {
     })
 
     if (!uniqueRawFiles.length) {
-      setPhotoError('არჩეული ფოტოები უკვე დამატებულია.')
+      setPhotoError(copy.duplicatePhotos)
       return
     }
     if (photos.length + uniqueRawFiles.length > MAX_PHOTO_COUNT) {
-      setPhotoError(`შეგიძლია ატვირთო მაქსიმუმ ${MAX_PHOTO_COUNT} ფოტო.`)
+      setPhotoError(copy.maxPhotos(MAX_PHOTO_COUNT))
       return
     }
 
     const rawError = validateRawPhotos(uniqueRawFiles)
     if (rawError) {
-      setPhotoError(rawError)
+      setPhotoError(locale === 'ka' ? rawError : copy.invalidRawPhotos)
       return
     }
 
@@ -285,7 +305,9 @@ export function SubmissionForm({ whatsappNumber }: SubmissionFormProps) {
         photos.map((photo) => photo.file),
       )
       if (preparedError) {
-        setPhotoError(preparedError)
+        setPhotoError(
+          locale === 'ka' ? preparedError : copy.invalidPreparedPhotos,
+        )
         return
       }
 
@@ -310,7 +332,11 @@ export function SubmissionForm({ whatsappNumber }: SubmissionFormProps) {
         },
       })
     } catch (error) {
-      setPhotoError(getPhotoPreparationErrorMessage(error))
+      setPhotoError(
+        locale === 'ka'
+          ? getPhotoPreparationErrorMessage(error)
+          : copy.preparationFailed,
+      )
     } finally {
       preparingLockRef.current = false
       setPhase('idle')
@@ -345,8 +371,7 @@ export function SubmissionForm({ whatsappNumber }: SubmissionFormProps) {
     values: PublicSubmissionFormValues,
   ): SubmissionInitInput {
     const phone = normalizeGeorgianPhone(values.phone)
-    if (!phone)
-      throw new SubmissionError('შეიყვანე მოქმედი ქართული მობილურის ნომერი.')
+    if (!phone) throw new SubmissionError(copy.invalidPhone)
 
     return {
       ...getCampaignAttribution(),
@@ -388,11 +413,9 @@ export function SubmissionForm({ whatsappNumber }: SubmissionFormProps) {
       },
       body: JSON.stringify(createInitPayload(values)),
     })
-    const init = await parseSuccessfulResponse<InitResponse>(response)
+    const init = await parseSuccessfulResponse<InitResponse>(response, locale)
     if (!isValidInitResponse(init, photos.length)) {
-      throw new SubmissionError(
-        'ატვირთვის სესიის დაწყება ვერ მოხერხდა. გთხოვ, ხელახლა სცადო.',
-      )
+      throw new SubmissionError(copy.initFailed)
     }
 
     const attempt: UploadAttempt = { init, uploadedIndexes: new Set() }
@@ -411,10 +434,7 @@ export function SubmissionForm({ whatsappNumber }: SubmissionFormProps) {
     for (const upload of orderedUploads) {
       if (attempt.uploadedIndexes.has(upload.fileIndex)) continue
       const selectedPhoto = photos[upload.fileIndex]
-      if (!selectedPhoto)
-        throw new SubmissionError(
-          'ფოტოების სია შეიცვალა. გთხოვ, თავიდან სცადო.',
-        )
+      if (!selectedPhoto) throw new SubmissionError(copy.photosChanged)
 
       updatePhotoStatus(upload.fileIndex, 'uploading', 12)
       const { error } = await supabase.storage
@@ -425,12 +445,7 @@ export function SubmissionForm({ whatsappNumber }: SubmissionFormProps) {
         })
 
       if (error) {
-        updatePhotoStatus(
-          upload.fileIndex,
-          'error',
-          100,
-          'ატვირთვა ვერ დასრულდა',
-        )
+        updatePhotoStatus(upload.fileIndex, 'error', 100, copy.uploadFailed)
         ambiguousFailures.push(upload.fileIndex)
         continue
       }
@@ -456,9 +471,7 @@ export function SubmissionForm({ whatsappNumber }: SubmissionFormProps) {
       setCompletedUploads(attempt.init.uploads.length)
       return completion
     } catch {
-      throw new SubmissionError(
-        `${ambiguousFailures[0] + 1}-ე ფოტო ვერ აიტვირთა. უკვე ატვირთული ფოტოები შენახულია — სცადე ხელახლა.`,
-      )
+      throw new SubmissionError(copy.photoRetry(ambiguousFailures[0] + 1))
     }
   }
 
@@ -476,7 +489,7 @@ export function SubmissionForm({ whatsappNumber }: SubmissionFormProps) {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(payload),
     })
-    return parseSuccessfulResponse<SubmissionCompleteResponse>(response)
+    return parseSuccessfulResponse<SubmissionCompleteResponse>(response, locale)
   }
 
   async function submit(values: PublicSubmissionFormValues) {
@@ -486,8 +499,8 @@ export function SubmissionForm({ whatsappNumber }: SubmissionFormProps) {
     if (photos.length < MIN_PHOTO_COUNT || photos.length > MAX_PHOTO_COUNT) {
       setPhotoError(
         photos.length < MIN_PHOTO_COUNT
-          ? `Preview-სთვის საჭიროა მინიმუმ ${MIN_PHOTO_COUNT} ფოტო.`
-          : `შეგიძლია ატვირთო მაქსიმუმ ${MAX_PHOTO_COUNT} ფოტო.`,
+          ? copy.minPhotos(MIN_PHOTO_COUNT)
+          : copy.maxPhotos(MAX_PHOTO_COUNT),
       )
       document.getElementById('vehicle-photos')?.focus()
       return
@@ -522,9 +535,7 @@ export function SubmissionForm({ whatsappNumber }: SubmissionFormProps) {
     } catch (error) {
       setPhase('error')
       setSubmissionError(
-        error instanceof SubmissionError
-          ? error.message
-          : 'ატვირთვა დროებით ვერ დასრულდა. შეყვანილი ინფორმაცია ფორმაში დარჩა — გთხოვ, ხელახლა სცადო.',
+        error instanceof SubmissionError ? error.message : copy.responseGeneric,
       )
     } finally {
       submittingLockRef.current = false
@@ -539,7 +550,11 @@ export function SubmissionForm({ whatsappNumber }: SubmissionFormProps) {
 
   if (phase === 'success' && successDetails) {
     return (
-      <SubmissionSuccess {...successDetails} whatsappNumber={whatsappNumber} />
+      <SubmissionSuccess
+        {...successDetails}
+        whatsappNumber={whatsappNumber}
+        locale={locale}
+      />
     )
   }
 
@@ -551,7 +566,7 @@ export function SubmissionForm({ whatsappNumber }: SubmissionFormProps) {
       onChangeCapture={invalidateRecoverableAttempt}
       onSubmit={(event) => {
         void handleSubmit(submit, () => {
-          setSubmissionError('შეამოწმე მონიშნული ველები და ხელახლა სცადე.')
+          setSubmissionError(copy.reviewFields)
         })(event)
       }}
       className="form-card"
@@ -559,10 +574,10 @@ export function SubmissionForm({ whatsappNumber }: SubmissionFormProps) {
       <div className="border-graphite/12 flex items-start justify-between gap-5 border-b pb-6">
         <div className="min-w-0">
           <p className="text-graphite/65 text-[10px] font-extrabold tracking-[0.18em] uppercase">
-            უფასო · ბარათის გარეშე
+            {copy.freeNoCard}
           </p>
           <h2 className="font-display text-graphite mt-2 text-3xl leading-tight font-bold tracking-[-0.05em] [overflow-wrap:anywhere] sm:text-4xl">
-            გამოგვიგზავნე მანქანა
+            {copy.formTitle}
           </h2>
         </div>
         <span className="bg-graphite text-amber grid size-11 shrink-0 place-items-center rounded-full">
@@ -576,7 +591,7 @@ export function SubmissionForm({ whatsappNumber }: SubmissionFormProps) {
       >
         <fieldset>
           <legend className="form-label">
-            თქვენ ვინ ხართ? <span aria-hidden="true">*</span>
+            {copy.sellerLegend} <span aria-hidden="true">*</span>
           </legend>
           <div
             className="grid grid-cols-2 gap-2"
@@ -596,7 +611,7 @@ export function SubmissionForm({ whatsappNumber }: SubmissionFormProps) {
               />
               <span className="border-graphite/14 text-graphite/68 peer-checked:border-graphite peer-checked:bg-graphite peer-checked:text-ivory peer-focus-visible:ring-graphite flex min-h-12 items-center justify-center gap-2 border px-3 text-center text-xs font-bold transition peer-focus-visible:ring-2 peer-focus-visible:ring-offset-2 sm:text-sm">
                 <UserRound aria-hidden="true" className="size-4 shrink-0" />
-                <span className="min-w-0">პირადი გამყიდველი</span>
+                <span className="min-w-0">{copy.privateSeller}</span>
               </span>
             </label>
             <label className="group relative min-w-0 cursor-pointer">
@@ -608,7 +623,7 @@ export function SubmissionForm({ whatsappNumber }: SubmissionFormProps) {
               />
               <span className="border-graphite/14 text-graphite/68 peer-checked:border-graphite peer-checked:bg-graphite peer-checked:text-ivory peer-focus-visible:ring-graphite flex min-h-12 items-center justify-center gap-2 border px-3 text-center text-xs font-bold transition peer-focus-visible:ring-2 peer-focus-visible:ring-offset-2 sm:text-sm">
                 <Building2 aria-hidden="true" className="size-4 shrink-0" />
-                <span className="min-w-0">ავტოდილერი</span>
+                <span className="min-w-0">{copy.dealer}</span>
               </span>
             </label>
           </div>
@@ -623,7 +638,7 @@ export function SubmissionForm({ whatsappNumber }: SubmissionFormProps) {
         <div className="grid gap-5 sm:grid-cols-2">
           <div>
             <label htmlFor="phone" className="form-label">
-              ტელეფონი ან WhatsApp <span aria-hidden="true">*</span>
+              {copy.phone} <span aria-hidden="true">*</span>
             </label>
             <input
               id="phone"
@@ -645,16 +660,16 @@ export function SubmissionForm({ whatsappNumber }: SubmissionFormProps) {
           </div>
           <div>
             <label htmlFor="customerName" className="form-label">
-              სახელი{' '}
+              {copy.name}{' '}
               <span className="text-graphite/65 font-normal">
-                (არასავალდებულო)
+                ({copy.optional})
               </span>
             </label>
             <input
               id="customerName"
               type="text"
               autoComplete="name"
-              placeholder="მაგ. ნიკა"
+              placeholder={copy.namePlaceholder}
               className="form-input"
               aria-invalid={Boolean(errors.customerName)}
               aria-describedby={
@@ -672,12 +687,16 @@ export function SubmissionForm({ whatsappNumber }: SubmissionFormProps) {
 
         <div>
           <label htmlFor="vehicleModel" className="form-label">
-            ავტომობილის მარკა და მოდელი <span aria-hidden="true">*</span>
+            {copy.makeModel} <span aria-hidden="true">*</span>
           </label>
           <input
             id="vehicleModel"
             type="text"
-            placeholder="მაგ. Toyota Camry / Mercedes C200"
+            placeholder={
+              locale === 'en'
+                ? 'e.g. Toyota Camry / Mercedes C200'
+                : 'მაგ. Toyota Camry / Mercedes C200'
+            }
             className="form-input"
             aria-invalid={Boolean(errors.vehicleModel)}
             aria-describedby={
@@ -696,7 +715,7 @@ export function SubmissionForm({ whatsappNumber }: SubmissionFormProps) {
         <div className="grid gap-3 sm:grid-cols-3 sm:gap-5">
           <div>
             <label htmlFor="vehicleYear" className="form-label">
-              გამოშვების წელი <span aria-hidden="true">*</span>
+              {copy.year} <span aria-hidden="true">*</span>
             </label>
             <input
               id="vehicleYear"
@@ -719,7 +738,7 @@ export function SubmissionForm({ whatsappNumber }: SubmissionFormProps) {
           </div>
           <div>
             <label htmlFor="price" className="form-label">
-              ფასი <span aria-hidden="true">*</span>
+              {copy.price} <span aria-hidden="true">*</span>
             </label>
             <input
               id="price"
@@ -739,7 +758,7 @@ export function SubmissionForm({ whatsappNumber }: SubmissionFormProps) {
           </div>
           <div>
             <label htmlFor="priceCurrency" className="form-label">
-              ვალუტა <span aria-hidden="true">*</span>
+              {copy.currency} <span aria-hidden="true">*</span>
             </label>
             <select
               id="priceCurrency"
@@ -766,15 +785,15 @@ export function SubmissionForm({ whatsappNumber }: SubmissionFormProps) {
 
         <details className="optional-fields border-graphite/12 border-y py-1">
           <summary className="text-graphite flex min-h-12 cursor-pointer list-none items-center justify-between gap-4 text-sm font-bold marker:hidden">
-            დამატებითი ინფორმაცია
+            {copy.additional}
             <span className="border-graphite/15 text-graphite/65 rounded-full border px-2.5 py-1 text-[9px] font-bold tracking-[0.12em] uppercase">
-              არასავალდებულო
+              {copy.optional}
             </span>
           </summary>
           <div className="grid gap-5 pt-3 pb-5 sm:grid-cols-2">
             <div>
               <label htmlFor="mileage" className="form-label">
-                გარბენი
+                {copy.mileage}
               </label>
               <input
                 id="mileage"
@@ -794,7 +813,7 @@ export function SubmissionForm({ whatsappNumber }: SubmissionFormProps) {
             </div>
             <div>
               <label htmlFor="engine" className="form-label">
-                ძრავი
+                {copy.engine}
               </label>
               <input
                 id="engine"
@@ -813,28 +832,28 @@ export function SubmissionForm({ whatsappNumber }: SubmissionFormProps) {
             </div>
             <div>
               <label htmlFor="transmission" className="form-label">
-                ტრანსმისია
+                {copy.transmission}
               </label>
               <select
                 id="transmission"
                 className="form-input appearance-none"
                 {...register('transmission')}
               >
-                <option value="">აირჩიე</option>
-                <option value="ავტომატიკა">ავტომატიკა</option>
-                <option value="მექანიკა">მექანიკა</option>
-                <option value="ვარიატორი">ვარიატორი</option>
-                <option value="რობოტი">რობოტი</option>
+                <option value="">{copy.choose}</option>
+                <option value="ავტომატიკა">{copy.automatic}</option>
+                <option value="მექანიკა">{copy.manual}</option>
+                <option value="ვარიატორი">{copy.cvt}</option>
+                <option value="რობოტი">{copy.robot}</option>
               </select>
             </div>
             <div>
               <label htmlFor="location" className="form-label">
-                მდებარეობა
+                {copy.location}
               </label>
               <input
                 id="location"
                 type="text"
-                placeholder="მაგ. თბილისი"
+                placeholder={copy.locationPlaceholder}
                 className="form-input"
                 aria-invalid={Boolean(errors.location)}
                 aria-describedby={
@@ -850,12 +869,12 @@ export function SubmissionForm({ whatsappNumber }: SubmissionFormProps) {
             </div>
             <div className="sm:col-span-2">
               <label htmlFor="additionalInfo" className="form-label">
-                დამატებითი ინფორმაცია
+                {copy.additional}
               </label>
               <textarea
                 id="additionalInfo"
                 rows={4}
-                placeholder="კომპლექტაცია, მდგომარეობა ან სხვა მნიშვნელოვანი დეტალი"
+                placeholder={copy.detailsPlaceholder}
                 className="form-input min-h-28 resize-y py-3"
                 aria-invalid={Boolean(errors.additionalInfo)}
                 aria-describedby={
@@ -881,12 +900,13 @@ export function SubmissionForm({ whatsappNumber }: SubmissionFormProps) {
           error={photoError}
           disabled={isBusy}
           preparing={phase === 'preparing'}
+          locale={locale}
           onFilesSelected={(files) => void addPhotos(files)}
           onRemove={removePhoto}
         />
 
         <div className="sr-only" aria-hidden="true">
-          <label htmlFor="website">ვებსაიტი</label>
+          <label htmlFor="website">{copy.website}</label>
           <input
             id="website"
             type="text"
@@ -914,11 +934,7 @@ export function SubmissionForm({ whatsappNumber }: SubmissionFormProps) {
                 strokeWidth={3}
               />
             </span>
-            <span>
-              ვეთანხმები, რომ ატვირთული მასალა გამოყენებული იქნება მხოლოდ ჩემი
-              Preview-ს მოსამზადებლად და საჯაროდ არ გამოქვეყნდება ჩემი თანხმობის
-              გარეშე.
-            </span>
+            <span>{copy.consent}</span>
           </label>
           {errors.consentGiven ? (
             <p
@@ -937,12 +953,12 @@ export function SubmissionForm({ whatsappNumber }: SubmissionFormProps) {
           <div className="text-graphite/65 mb-2 flex items-center justify-between gap-3 text-xs font-semibold">
             <span>
               {phase === 'preparing'
-                ? 'ფოტოები მზადდება…'
+                ? copy.preparing
                 : phase === 'initializing'
-                  ? 'უსაფრთხო ატვირთვა იწყება…'
+                  ? copy.initializing
                   : phase === 'completing'
-                    ? 'განაცხადი სრულდება…'
-                    : `იტვირთება ${completedUploads} / ${photos.length}`}
+                    ? copy.completing
+                    : copy.uploading(completedUploads, photos.length)}
             </span>
             <span className="font-mono">
               {phase === 'uploading' ? `${uploadProgress}%` : ''}
@@ -971,7 +987,7 @@ export function SubmissionForm({ whatsappNumber }: SubmissionFormProps) {
         >
           <AlertCircle aria-hidden="true" className="mt-0.5 size-5 shrink-0" />
           <div>
-            <p className="font-bold">ატვირთვა ვერ დასრულდა</p>
+            <p className="font-bold">{copy.errorTitle}</p>
             <p className="mt-1">{submissionError}</p>
           </div>
         </div>
@@ -982,7 +998,7 @@ export function SubmissionForm({ whatsappNumber }: SubmissionFormProps) {
         disabled={isBusy}
         className="form-submit group mt-6"
       >
-        <span>მიიღე უფასო Preview</span>
+        <span>{copy.submit}</span>
         {isBusy ? (
           <LoaderCircle aria-hidden="true" className="size-5 animate-spin" />
         ) : (
@@ -993,8 +1009,7 @@ export function SubmissionForm({ whatsappNumber }: SubmissionFormProps) {
         )}
       </button>
       <p className="text-graphite/65 mt-3 flex items-center justify-center gap-2 text-center text-[11px] leading-5">
-        <LockKeyhole aria-hidden="true" className="size-3.5" /> ფოტოები დაცულად
-        იტვირთება და საჯაროდ არ ჩანს.
+        <LockKeyhole aria-hidden="true" className="size-3.5" /> {copy.secure}
       </p>
     </form>
   )

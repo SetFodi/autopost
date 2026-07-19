@@ -284,23 +284,38 @@ const submissionFormPath = join(
   'forms',
   'submission-form.tsx',
 )
+const submissionFormCopyPath = join(
+  projectRoot,
+  'src',
+  'components',
+  'forms',
+  'submission-form-copy.ts',
+)
 const examplesPagePath = join(projectRoot, 'src', 'app', 'examples', 'page.tsx')
 
 try {
   const trackedCta = readFileSync(trackedCtaPath, 'utf8')
   const submissionSection = readFileSync(submissionSectionPath, 'utf8')
   const submissionForm = readFileSync(submissionFormPath, 'utf8')
-  const exactLabel = 'მიიღე უფასო Preview'
+  const submissionFormCopy = readFileSync(submissionFormCopyPath, 'utf8')
+  const georgianLabel = 'მიიღე უფასო Preview'
+  const englishLabel = 'Get a free preview'
   const targetExists = submissionSection.includes('id="preview-form"')
-  const linkTargetsForm = /href=["']\/#preview-form["']/.test(trackedCta)
+  const linkTargetsForm = trackedCta.includes(
+    "localizedSection(locale, 'preview-form')",
+  )
   const ctaCopyIsConsistent =
-    trackedCta.includes(exactLabel) && submissionForm.includes(exactLabel)
+    trackedCta.includes(georgianLabel) &&
+    trackedCta.includes(englishLabel) &&
+    submissionForm.includes('copy.submit') &&
+    submissionFormCopy.includes(georgianLabel) &&
+    submissionFormCopy.includes(englishLabel)
 
   if (targetExists && linkTargetsForm && ctaCopyIsConsistent) {
-    pass('primary CTA uses the agreed label and targets the upload form')
+    pass('bilingual primary CTA uses the agreed labels and upload-form target')
   } else {
     fail(
-      'primary CTA contract is broken: require "მიიღე უფასო Preview" and a /#preview-form target that works from every route',
+      'primary CTA contract is broken: require matching Georgian/English labels and a localized preview-form target',
     )
   }
 } catch {

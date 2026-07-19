@@ -1,6 +1,9 @@
 import { describe, expect, it } from 'vitest'
 
-import { publicSubmissionFormSchema } from '@/components/forms/submission-form-schema'
+import {
+  createPublicSubmissionFormSchema,
+  publicSubmissionFormSchema,
+} from '@/components/forms/submission-form-schema'
 import {
   MAX_FILE_SIZE_BYTES,
   submissionInitSchema,
@@ -48,6 +51,20 @@ function validPayload() {
 }
 
 describe('submissionInitSchema', () => {
+  it('returns English validation messages for the English form', () => {
+    const result = createPublicSubmissionFormSchema('en').safeParse({
+      ...validPayload(),
+      vehicleModel: '',
+    })
+
+    expect(result.success).toBe(false)
+    if (!result.success) {
+      expect(result.error.issues[0]?.message).toBe(
+        'Enter the vehicle make and model.',
+      )
+    }
+  })
+
   it('normalizes and coerces a valid submission', () => {
     const result = submissionInitSchema.parse(validPayload())
     expect(result.phone).toBe('+995555123456')

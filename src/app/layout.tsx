@@ -39,7 +39,10 @@ export const metadata: Metadata = {
     'ავტომობილის ფოტოები',
     'AutoPost',
   ],
-  alternates: { canonical: '/' },
+  alternates: {
+    canonical: '/',
+    languages: { 'ka-GE': '/', en: '/en', 'x-default': '/' },
+  },
   robots: {
     index: true,
     follow: true,
@@ -55,6 +58,7 @@ export const metadata: Metadata = {
   openGraph: {
     type: 'website',
     locale: 'ka_GE',
+    alternateLocale: ['en_US'],
     url: '/',
     siteName: 'AutoPost',
     title,

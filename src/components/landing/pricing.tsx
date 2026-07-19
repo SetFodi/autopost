@@ -1,8 +1,9 @@
 import { Check } from 'lucide-react'
 
 import { TrackedCta } from '@/components/landing/tracked-cta'
+import type { AppLocale } from '@/lib/i18n'
 
-const previewItems = [
+const previewItemsKa = [
   'Watermark-ით დაცული',
   'Reel-ისა და დიზაინების წინასწარი ნახვა',
   'პირადი შედეგის გვერდი',
@@ -10,7 +11,7 @@ const previewItems = [
   'ბარათი არ არის საჭირო',
 ] as const
 
-const packageItems = [
+const packageItemsKa = [
   'Reel watermark-ის გარეშე',
   '3 Story',
   '6-სლაიდიანი carousel',
@@ -18,17 +19,43 @@ const packageItems = [
   'გაყიდვის ტექსტი ქართულ, ინგლისურ და რუსულ ენებზე',
 ] as const
 
-export function Pricing() {
+export function Pricing({ locale = 'ka' }: { locale?: AppLocale }) {
+  const english = locale === 'en'
+  const previewItems = english
+    ? [
+        'Protected with a watermark',
+        'Preview the Reel and designs',
+        'Private results page',
+        'Automatic processing',
+        'No card required',
+      ]
+    : previewItemsKa
+  const packageItems = english
+    ? [
+        'Reel without a watermark',
+        '3 Stories',
+        '6-slide carousel',
+        'Main square listing card',
+        'Sales copy in Georgian, English, and Russian',
+      ]
+    : packageItemsKa
+
   return (
     <section id="pricing" className="py-16 sm:py-24 lg:py-28">
       <div className="site-container">
         <div className="mx-auto max-w-2xl text-center">
           <p className="section-kicker justify-center">
-            ჯერ ნახე. შემდეგ გადაწყვიტე.
+            {english
+              ? 'SEE IT FIRST. THEN DECIDE.'
+              : 'ჯერ ნახე. შემდეგ გადაწყვიტე.'}
           </p>
-          <h2 className="font-display section-title">რისკის გარეშე იწყებ</h2>
+          <h2 className="font-display section-title">
+            {english ? 'Start with zero risk' : 'რისკის გარეშე იწყებ'}
+          </h2>
           <p className="text-ivory/52 mx-auto mt-4 max-w-md text-base leading-8">
-            გადახდა მხოლოდ იმ შემთხვევაში, თუ Preview მოგეწონება.
+            {english
+              ? 'You only pay if you like your preview.'
+              : 'გადახდა მხოლოდ იმ შემთხვევაში, თუ Preview მოგეწონება.'}
           </p>
         </div>
 
@@ -42,10 +69,10 @@ export function Pricing() {
               <div className="flex items-start justify-between gap-4">
                 <div>
                   <p className="text-graphite/50 font-mono text-[11px] font-semibold tracking-[0.18em] uppercase">
-                    დაიწყე აქ
+                    {english ? 'START HERE' : 'დაიწყე აქ'}
                   </p>
                   <h3 className="font-display mt-2 text-2xl font-extrabold sm:text-3xl">
-                    უფასო Preview
+                    {english ? 'Free preview' : 'უფასო Preview'}
                   </h3>
                 </div>
                 <span className="plate-chip border-graphite/20 text-graphite/60">
@@ -72,6 +99,7 @@ export function Pricing() {
 
               <TrackedCta
                 source="pricing_preview"
+                locale={locale}
                 className="mt-8 w-full justify-between"
               />
             </div>
@@ -81,10 +109,10 @@ export function Pricing() {
             <div className="flex items-start justify-between gap-4">
               <div>
                 <p className="text-ivory/45 font-mono text-[11px] font-semibold tracking-[0.18em] uppercase">
-                  თუ მოგეწონება
+                  {english ? 'IF YOU LIKE IT' : 'თუ მოგეწონება'}
                 </p>
                 <h3 className="font-display text-ivory mt-2 text-2xl font-extrabold sm:text-3xl">
-                  სრული პაკეტი
+                  {english ? 'Complete kit' : 'სრული პაკეტი'}
                 </h3>
               </div>
               <span className="plate-chip border-amber/35 text-amber">
@@ -113,8 +141,9 @@ export function Pricing() {
             </ul>
 
             <p className="text-ivory/45 mt-8 border border-white/10 bg-white/[0.03] px-4 py-3 text-xs leading-6">
-              Preview-ს მოწონების შემდეგ გადაიხდი უსაფრთხო TBC Checkout-ით და
-              სუფთა ფაილები ავტომატურად გაიხსნება პირად გვერდზე.
+              {english
+                ? 'After approving the preview, pay securely through TBC Checkout and unlock the clean files automatically on your private page.'
+                : 'Preview-ს მოწონების შემდეგ გადაიხდი უსაფრთხო TBC Checkout-ით და სუფთა ფაილები ავტომატურად გაიხსნება პირად გვერდზე.'}
             </p>
           </article>
         </div>

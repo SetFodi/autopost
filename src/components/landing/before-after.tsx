@@ -2,8 +2,16 @@ import Image from 'next/image'
 import { ArrowRight, Play } from 'lucide-react'
 
 import type { CampaignAssetSet } from '@/lib/campaign-assets'
+import type { AppLocale } from '@/lib/i18n'
 
-export function BeforeAfter({ assets }: { assets: CampaignAssetSet }) {
+export function BeforeAfter({
+  assets,
+  locale = 'ka',
+}: {
+  assets: CampaignAssetSet
+  locale?: AppLocale
+}) {
+  const english = locale === 'en'
   const sourcePhotos = assets.sourcePhotos.slice(0, 2)
   const reel = assets.reel
   const carousel = assets.carousel
@@ -17,15 +25,21 @@ export function BeforeAfter({ assets }: { assets: CampaignAssetSet }) {
       <div className="site-container">
         <div className="grid gap-6 lg:grid-cols-[1.15fr_0.85fr] lg:items-end">
           <div>
-            <p className="section-kicker">ნებისმიერი მარკა · სრული პაკეტი</p>
+            <p className="section-kicker">
+              {english
+                ? 'ANY MAKE · COMPLETE KIT'
+                : 'ნებისმიერი მარკა · სრული პაკეტი'}
+            </p>
             <h2 className="font-display section-title max-w-3xl">
-              ტელეფონის კადრებიდან — გასაყიდად გამზადებულ კონტენტამდე
+              {english
+                ? 'From phone snapshots to a complete sales-ready content kit'
+                : 'ტელეფონის კადრებიდან — გასაყიდად გამზადებულ კონტენტამდე'}
             </h2>
           </div>
           <p className="text-ivory/55 max-w-md text-base leading-8 lg:justify-self-end lg:pb-1">
-            Toyota-დან Porsche-მდე — AutoPost შენი ფოტოებიდან ამზადებს სრულ
-            სარეკლამო პაკეტს Facebook-ის, Instagram-ის, TikTok-ისა და
-            MyAuto-სთვის.
+            {english
+              ? 'From Toyota to Porsche, AutoPost turns your photos into a coordinated package for Facebook, Instagram, TikTok, Marketplace, and MyAuto.'
+              : 'Toyota-დან Porsche-მე — AutoPost შენი ფოტოებიდან ამზადებს სრულ სარეკლამო პაკეტს Facebook-ის, Instagram-ის, TikTok-ისა და MyAuto-სთვის.'}
           </p>
         </div>
 
@@ -33,9 +47,11 @@ export function BeforeAfter({ assets }: { assets: CampaignAssetSet }) {
           <article className="surface-card flex flex-col overflow-hidden">
             <div className="flex items-center justify-between border-b border-white/10 px-4 py-3.5">
               <span className="text-ivory/55 font-mono text-[10px] font-semibold tracking-[0.18em]">
-                საწყისი მასალა
+                {english ? 'SOURCE MATERIAL' : 'საწყისი მასალა'}
               </span>
-              <span className="plate-chip text-ivory/50">3–15 ფოტო</span>
+              <span className="plate-chip text-ivory/50">
+                3–15 {english ? 'PHOTOS' : 'ფოტო'}
+              </span>
             </div>
             <div className="grid flex-1 gap-2 p-2">
               {sourcePhotos.map((photo) => (
@@ -61,8 +77,9 @@ export function BeforeAfter({ assets }: { assets: CampaignAssetSet }) {
               ))}
             </div>
             <p className="text-ivory/45 border-t border-white/10 px-4 py-3.5 text-xs leading-5">
-              ტელეფონით გადაღებული რეალური ფოტოები — ზუსტად ის, რასაც შენ
-              გვიგზავნი. ნებისმიერი მარკა.
+              {english
+                ? 'Real phone photos—exactly what you already have. Any make or body style.'
+                : 'ტელეფონით გადაღებული რეალური ფოტოები — ზუსტად ის, რასაც შენ გვიგზავნი. ნებისმიერი მარკა.'}
             </p>
           </article>
 
@@ -98,7 +115,9 @@ export function BeforeAfter({ assets }: { assets: CampaignAssetSet }) {
                     aria-label={`${reel.model} — Reel Preview`}
                   >
                     <source src={reel.videoSrc} type="video/mp4" />
-                    თქვენი ბრაუზერი ვიდეოს ვერ აჩვენებს.
+                    {english
+                      ? 'Your browser cannot play this video.'
+                      : 'თქვენი ბრაუზერი ვიდეოს ვერ აჩვენებს.'}
                   </video>
                 ) : (
                   <Image

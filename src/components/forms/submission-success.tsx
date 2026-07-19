@@ -11,6 +11,7 @@ import {
 import { useEffect, useRef, useState } from 'react'
 
 import { TrackedWhatsappLink } from '@/components/landing/tracked-whatsapp-link'
+import type { AppLocale } from '@/lib/i18n'
 
 interface SubmissionSuccessProps {
   publicReference: string
@@ -18,13 +19,16 @@ interface SubmissionSuccessProps {
   photoCount: number
   resultUrl: string
   whatsappNumber?: string
+  locale?: AppLocale
 }
 
-function supportUrl(phone: string, reference: string) {
+function supportUrl(phone: string, reference: string, locale: AppLocale) {
   const normalized = phone.replace(/\D/g, '')
   if (!normalized) return null
   const message = encodeURIComponent(
-    `გამარჯობა! AutoPost-ის განაცხადთან დაკავშირებით მაქვს კითხვა. კოდი: ${reference}`,
+    locale === 'en'
+      ? `Hello! I have a question about my AutoPost request. Reference: ${reference}`
+      : `გამარჯობა! AutoPost-ის განაცხადთან დაკავშირებით მაქვს კითხვა. კოდი: ${reference}`,
   )
   return `https://wa.me/${normalized}?text=${message}`
 }
@@ -35,11 +39,13 @@ export function SubmissionSuccess({
   photoCount,
   resultUrl,
   whatsappNumber,
+  locale = 'ka',
 }: SubmissionSuccessProps) {
+  const english = locale === 'en'
   const [copied, setCopied] = useState(false)
   const resetTimerRef = useRef<number | null>(null)
   const whatsappUrl = whatsappNumber
-    ? supportUrl(whatsappNumber, publicReference)
+    ? supportUrl(whatsappNumber, publicReference, locale)
     : null
 
   useEffect(() => {
@@ -70,28 +76,37 @@ export function SubmissionSuccess({
           <Check aria-hidden="true" className="size-7" strokeWidth={3} />
         </span>
         <span className="text-ivory/55 rounded-full border border-white/12 px-3 py-1.5 font-mono text-[10px] tracking-[0.13em]">
-          SUBMISSION RECEIVED
+          {english ? 'SUBMISSION RECEIVED' : 'განაცხადი მიღებულია'}
         </span>
       </div>
 
       <h2 className="font-display text-ivory mt-9 text-4xl leading-[1.05] font-bold tracking-[-0.055em] sm:text-5xl">
-        AutoPost უკვე ამზადებს Preview-ს
+        {english
+          ? 'AutoPost is preparing your preview'
+          : 'AutoPost უკვე ამზადებს Preview-ს'}
       </h2>
       <p className="text-ivory/64 mt-5 max-w-xl text-base leading-8">
-        გვერდი შექმნილია და დამუშავება ავტომატურად დაიწყო. გახსენი პირადი
-        შედეგის გვერდი — Preview იქვე გამოჩნდება მზადებისთანავე.
+        {english
+          ? 'Your private results page is ready and processing started automatically. Open it now—your preview will appear there as soon as it is ready.'
+          : 'გვერდი შექმნილია და დამუშავება ავტომატურად დაიწყო. გახსენი პირადი შედეგის გვერდი — Preview იქვე გამოჩნდება მზადებისთანავე.'}
       </p>
 
       <dl className="mt-9 divide-y divide-white/10 border-y border-white/10">
         <div className="flex items-center justify-between gap-5 py-4">
-          <dt className="text-ivory/55 text-xs">განაცხადის კოდი</dt>
+          <dt className="text-ivory/55 text-xs">
+            {english ? 'Reference' : 'განაცხადის კოდი'}
+          </dt>
           <dd className="text-amber flex min-w-0 items-center gap-2 font-mono text-sm font-bold">
             <span className="truncate">{publicReference}</span>
             <button
               type="button"
               onClick={copyReference}
               className="text-ivory/65 hover:border-amber/45 hover:text-amber grid size-11 shrink-0 place-items-center rounded-full border border-white/12"
-              aria-label="განაცხადის კოდის კოპირება"
+              aria-label={
+                english
+                  ? 'Copy submission reference'
+                  : 'განაცხადის კოდის კოპირება'
+              }
             >
               {copied ? (
                 <Check aria-hidden="true" className="size-3.5" />
@@ -102,13 +117,17 @@ export function SubmissionSuccess({
           </dd>
         </div>
         <div className="flex items-center justify-between gap-5 py-4">
-          <dt className="text-ivory/55 text-xs">ავტომობილი</dt>
+          <dt className="text-ivory/55 text-xs">
+            {english ? 'Vehicle' : 'ავტომობილი'}
+          </dt>
           <dd className="text-ivory max-w-[64%] text-right text-sm font-semibold">
             {vehicleModel}
           </dd>
         </div>
         <div className="flex items-center justify-between gap-5 py-4">
-          <dt className="text-ivory/55 text-xs">მიღებული ფოტოები</dt>
+          <dt className="text-ivory/55 text-xs">
+            {english ? 'Photos received' : 'მიღებული ფოტოები'}
+          </dt>
           <dd className="text-ivory text-sm font-semibold">{photoCount}</dd>
         </div>
         <div className="flex items-center justify-between gap-5 py-4">
@@ -117,10 +136,10 @@ export function SubmissionSuccess({
               aria-hidden="true"
               className="size-3.5 animate-spin"
             />{' '}
-            სტატუსი
+            {english ? 'Status' : 'სტატუსი'}
           </dt>
           <dd className="text-ivory text-sm font-semibold">
-            ავტომატური დამუშავება
+            {english ? 'Automatic processing' : 'ავტომატური დამუშავება'}
           </dd>
         </div>
       </dl>
@@ -130,15 +149,16 @@ export function SubmissionSuccess({
           aria-hidden="true"
           className="text-amber mt-0.5 size-5 shrink-0"
         />
-        ფოტოებს მხოლოდ თქვენი Preview-ს მოსამზადებლად გამოვიყენებთ და თანხმობის
-        გარეშე საჯაროდ არ გამოვაქვეყნებთ.
+        {english
+          ? 'We only use your photos to prepare your preview and never publish them without your consent.'
+          : 'ფოტოებს მხოლოდ თქვენი Preview-ს მოსამზადებლად გამოვიყენებთ და თანხმობის გარეშე საჯაროდ არ გამოვაქვეყნებთ.'}
       </div>
 
       <a
         href={resultUrl}
         className="bg-amber text-graphite mt-6 inline-flex min-h-14 w-full items-center justify-center gap-2 px-5 text-sm font-extrabold transition-colors hover:bg-[#e1ff75]"
       >
-        პირადი შედეგის გახსნა
+        {english ? 'Open private results' : 'პირადი შედეგის გახსნა'}
         <ArrowRight aria-hidden="true" className="size-5" />
       </a>
 
@@ -148,8 +168,8 @@ export function SubmissionSuccess({
           source="success_support"
           className="text-ivory/70 mt-3 inline-flex min-h-12 w-full items-center justify-center gap-2 border border-white/12 px-5 text-sm font-bold transition-colors hover:border-white/25 hover:text-white"
         >
-          <MessageCircle aria-hidden="true" className="size-5" /> WhatsApp
-          მხარდაჭერა
+          <MessageCircle aria-hidden="true" className="size-5" /> WhatsApp{' '}
+          {english ? 'support' : 'მხარდაჭერა'}
         </TrackedWhatsappLink>
       ) : null}
     </div>

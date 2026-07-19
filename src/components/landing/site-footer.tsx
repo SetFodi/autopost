@@ -2,13 +2,15 @@ import Link from 'next/link'
 import { ExternalLink, MessageCircle } from 'lucide-react'
 
 import { TrackedWhatsappLink } from '@/components/landing/tracked-whatsapp-link'
+import { localizedSection, type AppLocale } from '@/lib/i18n'
 
 function whatsappHref(phone: string) {
   const normalized = phone.replace(/\D/g, '')
   return normalized ? `https://wa.me/${normalized}` : null
 }
 
-export function SiteFooter() {
+export function SiteFooter({ locale = 'ka' }: { locale?: AppLocale }) {
+  const english = locale === 'en'
   const operator = process.env.NEXT_PUBLIC_OPERATOR_NAME?.trim()
   const phone = process.env.NEXT_PUBLIC_WHATSAPP_NUMBER?.trim()
   const facebookUrl = process.env.NEXT_PUBLIC_FACEBOOK_URL?.trim()
@@ -26,12 +28,13 @@ export function SiteFooter() {
               </span>
             </div>
             <p className="text-ivory/48 mt-5 max-w-md text-sm leading-7">
-              AutoPost-ს მართავს რეალური ქართული გუნდი. კითხვების შემთხვევაში
-              მოგვწერეთ WhatsApp-ზე ან Facebook-ზე.
+              {english
+                ? 'AutoPost is run by a real team in Georgia. Message us on WhatsApp or Facebook if you need help.'
+                : 'AutoPost-ს მართავს რეალური ქართული გუნდი. კითხვების შემთხვევაში მოგვწერეთ WhatsApp-ზე ან Facebook-ზე.'}
             </p>
             {operator ? (
               <p className="text-ivory/45 mt-3 text-xs">
-                ოპერატორი: {operator}
+                {english ? 'Operator' : 'ოპერატორი'}: {operator}
               </p>
             ) : null}
           </div>
@@ -42,49 +45,70 @@ export function SiteFooter() {
                 AutoPost
               </p>
               <nav
-                aria-label="AutoPost-ის გვერდები"
+                aria-label={english ? 'AutoPost pages' : 'AutoPost-ის გვერდები'}
                 className="text-ivory/58 mt-4 flex flex-col items-start gap-3 text-sm"
               >
-                <Link className="nav-link" href="/examples">
-                  მაგალითები
+                <Link
+                  className="nav-link"
+                  href={
+                    english
+                      ? localizedSection(locale, 'transformation')
+                      : '/examples'
+                  }
+                >
+                  {english ? 'Examples' : 'მაგალითები'}
                 </Link>
-                <Link className="nav-link" href="/how-it-works">
-                  როგორ მუშაობს
+                <Link
+                  className="nav-link"
+                  href={
+                    english
+                      ? localizedSection(locale, 'how-it-works')
+                      : '/how-it-works'
+                  }
+                >
+                  {english ? 'How it works' : 'როგორ მუშაობს'}
                 </Link>
-                <Link className="nav-link" href="/pricing">
-                  ფასი
+                <Link
+                  className="nav-link"
+                  href={
+                    english ? localizedSection(locale, 'pricing') : '/pricing'
+                  }
+                >
+                  {english ? 'Pricing' : 'ფასი'}
                 </Link>
-                <Link className="nav-link" href="/faq">
-                  კითხვები
-                </Link>
+                {english ? null : (
+                  <Link className="nav-link" href="/faq">
+                    კითხვები
+                  </Link>
+                )}
               </nav>
             </div>
             <div>
               <p className="text-ivory/40 text-xs font-bold tracking-[0.16em] uppercase">
-                ინფორმაცია
+                {english ? 'INFORMATION' : 'ინფორმაცია'}
               </p>
               <nav
-                aria-label="სამართლებრივი გვერდები"
+                aria-label={english ? 'Legal pages' : 'სამართლებრივი გვერდები'}
                 className="text-ivory/58 mt-4 flex flex-col items-start gap-3 text-sm"
               >
                 <Link className="nav-link" href="/privacy">
-                  კონფიდენციალურობა
+                  {english ? 'Privacy policy' : 'კონფიდენციალურობა'}
                 </Link>
                 <Link className="nav-link" href="/terms">
-                  წესები და პირობები
+                  {english ? 'Terms and conditions' : 'წესები და პირობები'}
                 </Link>
                 <Link className="nav-link" href="/about">
-                  ჩვენს შესახებ
+                  {english ? 'About us' : 'ჩვენს შესახებ'}
                 </Link>
                 <Link className="nav-link" href="/guides">
-                  გზამკვლევები
+                  {english ? 'Guides (Georgian)' : 'გზამკვლევები'}
                 </Link>
               </nav>
             </div>
             {(whatsapp || facebookUrl) && (
               <div>
                 <p className="text-ivory/40 text-xs font-bold tracking-[0.16em] uppercase">
-                  დაგვიკავშირდი
+                  {english ? 'CONTACT' : 'დაგვიკავშირდი'}
                 </p>
                 <div className="text-ivory/58 mt-4 flex flex-col items-start gap-3 text-sm">
                   {whatsapp ? (
@@ -121,7 +145,10 @@ export function SiteFooter() {
         </div>
 
         <div className="text-ivory/40 mt-12 flex flex-col gap-3 border-t border-white/[0.07] pt-6 text-[11px] sm:flex-row sm:items-center sm:justify-between">
-          <p>© {new Date().getFullYear()} AutoPost. ყველა უფლება დაცულია.</p>
+          <p>
+            © {new Date().getFullYear()} AutoPost.{' '}
+            {english ? 'All rights reserved.' : 'ყველა უფლება დაცულია.'}
+          </p>
           <p className="font-mono tracking-[0.14em]">
             FOR CARS · BUILT IN GEORGIA
           </p>

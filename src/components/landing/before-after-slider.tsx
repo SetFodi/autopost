@@ -6,16 +6,19 @@ import Image from 'next/image'
 import { Maximize2, MoveHorizontal, X } from 'lucide-react'
 
 import type { CampaignAssetSet } from '@/lib/campaign-assets'
+import type { AppLocale } from '@/lib/i18n'
 
 const INITIAL_POSITION = 54
 
 type ComparisonAssets = Pick<CampaignAssetSet, 'heroBefore' | 'heroAfter'>
 type ComparisonProps = ComparisonAssets & {
   kind?: CampaignAssetSet['kind']
+  locale?: AppLocale
 }
 
 type ComparisonStageProps = ComparisonAssets & {
   eager?: boolean
+  locale: AppLocale
   position: number
   onChange: (position: number) => void
   onInteract: () => void
@@ -25,10 +28,13 @@ function ComparisonStage({
   eager = false,
   heroBefore,
   heroAfter,
+  locale,
   position,
   onChange,
   onInteract,
 }: ComparisonStageProps) {
+  const english = locale === 'en'
+
   return (
     <div
       className="ba-frame aspect-[3/2]"
@@ -70,7 +76,7 @@ function ComparisonStage({
             className="bg-amber live-dot size-1.5 rounded-full"
             aria-hidden="true"
           />
-          მზა კადრი
+          {english ? 'Ready image' : 'მზა კადრი'}
         </span>
       </div>
 
@@ -85,7 +91,8 @@ function ComparisonStage({
           className={`object-cover ${heroBefore.objectPosition}`}
         />
         <span className="media-label absolute top-3 left-3 sm:top-4 sm:left-4">
-          ჩვეულებრივი ფოტო · {heroBefore.fileLabel}
+          {english ? 'Original photo' : 'ჩვეულებრივი ფოტო'} ·{' '}
+          {heroBefore.fileLabel}
         </span>
       </div>
 
@@ -108,7 +115,11 @@ function ComparisonStage({
           onChange(Number(event.target.value))
         }}
         className="ba-range"
-        aria-label="შედარების ხაზის გადაადგილება — მარცხნივ ჩვეულებრივი ფოტო, მარჯვნივ AutoPost-ის მზა რეკლამა"
+        aria-label={
+          english
+            ? 'Move the comparison line — original photo on the left, AutoPost result on the right'
+            : 'შედარების ხაზის გადაადგილება — მარცხნივ ჩვეულებრივი ფოტო, მარჯვნივ AutoPost-ის მზა რეკლამა'
+        }
       />
     </div>
   )
@@ -118,7 +129,9 @@ export function BeforeAfterSlider({
   heroBefore,
   heroAfter,
   kind = 'real',
+  locale = 'ka',
 }: ComparisonProps) {
+  const english = locale === 'en'
   const [position, setPosition] = useState(INITIAL_POSITION)
   const [isAutoPlaying, setIsAutoPlaying] = useState(false)
   const [isDialogOpen, setIsDialogOpen] = useState(false)
@@ -161,8 +174,12 @@ export function BeforeAfterSlider({
             <span className="ba-status-dot" aria-hidden="true" />
             <span className="text-ivory/70 truncate font-mono text-[9px] font-semibold tracking-[0.15em] uppercase sm:text-[10px]">
               {kind === 'showcase'
-                ? 'საილუსტრაციო დემო · იგივე მანქანა'
-                : 'რეალური ფოტო · რეალური შედეგი'}
+                ? english
+                  ? 'Illustrative demo · same car'
+                  : 'საილუსტრაციო დემო · იგივე მანქანა'
+                : english
+                  ? 'Real photo · real result'
+                  : 'რეალური ფოტო · რეალური შედეგი'}
             </span>
           </div>
 
@@ -181,10 +198,16 @@ export function BeforeAfterSlider({
             type="button"
             onClick={openDialog}
             className="ba-expand"
-            aria-label="შედარების დიდ ფანჯარაში გახსნა"
+            aria-label={
+              english
+                ? 'Open larger comparison'
+                : 'შედარების დიდ ფანჯარაში გახსნა'
+            }
           >
             <Maximize2 aria-hidden="true" className="size-3.5" />
-            <span className="hidden sm:inline">გადიდება</span>
+            <span className="hidden sm:inline">
+              {english ? 'Enlarge' : 'გადიდება'}
+            </span>
           </button>
         </div>
 
@@ -192,14 +215,17 @@ export function BeforeAfterSlider({
           eager
           heroBefore={heroBefore}
           heroAfter={heroAfter}
+          locale={locale}
           position={position}
           onChange={setPosition}
           onInteract={stopAutoPlay}
         />
 
         <figcaption className="ba-caption">
-          <span>← გამყიდველის ფოტო</span>
-          <span className="text-amber">მზა განცხადება →</span>
+          <span>← {english ? "Seller's photo" : 'გამყიდველის ფოტო'}</span>
+          <span className="text-amber">
+            {english ? 'Ready to list' : 'მზა განცხადება'} →
+          </span>
         </figcaption>
       </figure>
 
@@ -222,14 +248,16 @@ export function BeforeAfterSlider({
                 id="ba-dialog-title"
                 className="text-ivory mt-1 text-base font-bold tracking-[-0.02em] sm:text-lg"
               >
-                გაასრიალე და შეადარე სრული კადრი
+                {english
+                  ? 'Slide to compare the full image'
+                  : 'გაასრიალე და შეადარე სრული კადრი'}
               </h2>
             </div>
             <button
               type="button"
               onClick={() => dialogRef.current?.close()}
               className="ba-dialog-close"
-              aria-label="ფანჯრის დახურვა"
+              aria-label={english ? 'Close dialog' : 'ფანჯრის დახურვა'}
             >
               <X aria-hidden="true" className="size-4" />
             </button>
@@ -239,6 +267,7 @@ export function BeforeAfterSlider({
             <ComparisonStage
               heroBefore={heroBefore}
               heroAfter={heroAfter}
+              locale={locale}
               position={position}
               onChange={setPosition}
               onInteract={stopAutoPlay}
@@ -246,8 +275,9 @@ export function BeforeAfterSlider({
           ) : null}
 
           <p className="text-ivory/45 mt-3 text-center text-xs leading-5 sm:text-sm">
-            იგივე მანქანა — უფრო სუფთა კომპოზიციითა და ბუნებრივი დამუშავებით,
-            გასაყიდად მზა კადრად.
+            {english
+              ? 'The same car, improved with cleaner framing and natural editing—ready to sell.'
+              : 'იგივე მანქანა — უფრო სუფთა კომპოზიციითა და ბუნებრივი დამუშავებით, გასაყიდად მზა კადრად.'}
           </p>
         </div>
       </dialog>

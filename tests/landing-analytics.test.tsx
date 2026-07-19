@@ -56,4 +56,13 @@ describe('LandingAnalytics', () => {
     expect(analyticsMocks.trackMetaPageView).toHaveBeenCalledTimes(2)
     expect(analyticsMocks.trackInternalEvent).toHaveBeenCalledTimes(2)
   })
+
+  it('records the English landing path', () => {
+    render(<LandingAnalytics path="/en" />)
+
+    expect(analyticsMocks.trackInternalEvent).toHaveBeenCalledWith(
+      'landing_view',
+      { metadata: { path: '/en' } },
+    )
+  })
 })

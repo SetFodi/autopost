@@ -3,12 +3,9 @@ import { Check, Clock3, Sparkles } from 'lucide-react'
 import { BeforeAfterSlider } from '@/components/landing/before-after-slider'
 import { TrackedCta } from '@/components/landing/tracked-cta'
 import type { CampaignAssetSet } from '@/lib/campaign-assets'
+import type { AppLocale } from '@/lib/i18n'
 
-const trustItems = [
-  { icon: Check, text: 'პირველი Preview უფასოა' },
-  { icon: Clock3, text: 'Preview ავტომატურად მზადდება' },
-  { icon: Sparkles, text: 'ბარათი არ გჭირდება' },
-] as const
+const trustIcons = [Check, Clock3, Sparkles] as const
 
 const brandStrip = [
   'Toyota',
@@ -17,10 +14,28 @@ const brandStrip = [
   'Audi',
   'Porsche',
   'Tesla',
-  'და სხვა',
 ] as const
 
-export function Hero({ assets }: { assets: CampaignAssetSet }) {
+export function Hero({
+  assets,
+  locale = 'ka',
+}: {
+  assets: CampaignAssetSet
+  locale?: AppLocale
+}) {
+  const english = locale === 'en'
+  const trustItems = english
+    ? [
+        'Your first preview is free',
+        'Generated automatically',
+        'No card required',
+      ]
+    : [
+        'პირველი Preview უფასოა',
+        'Preview ავტომატურად მზადდება',
+        'ბარათი არ გჭირდება',
+      ]
+
   return (
     <section
       id="top"
@@ -42,35 +57,39 @@ export function Hero({ assets }: { assets: CampaignAssetSet }) {
             </p>
 
             <h1 className="font-display reveal reveal-2 text-ivory text-[clamp(2.2rem,5.4vw,4.65rem)] leading-[1.01] font-extrabold tracking-[-0.055em] [overflow-wrap:anywhere] lg:text-[clamp(3rem,4.15vw,4.65rem)]">
-              ჩვეულებრივი კადრები{' '}
-              <span className="text-amber block pt-1">გასაყიდ ფოტოებად.</span>
+              {english ? 'Ordinary car photos,' : 'ჩვეულებრივი კადრები'}{' '}
+              <span className="text-amber block pt-1">
+                {english ? 'ready to sell.' : 'გასაყიდ ფოტოებად.'}
+              </span>
             </h1>
 
             <p className="reveal reveal-3 text-ivory/58 mt-5 max-w-lg text-[0.95rem] leading-7 sm:mt-6 sm:text-base sm:leading-8">
-              ატვირთე მანქანის რეალური ფოტოები. AutoPost გაასუფთავებს კადრს,
-              მოაწესრიგებს ფონს და მოამზადებს Reel-ს, Story-სა და განცხადებას —
-              მზა ჩამოსატვირთ ფაილებად, ბუნებრივად, ზედმეტი „სტუდიური“ ეფექტის
-              გარეშე.
+              {english
+                ? 'Upload real photos of your car. AutoPost improves the framing, cleans up distractions, and prepares a Reel, Stories, carousel, listing card, and sales copy—naturally, without a fake studio look.'
+                : 'ატვირთე მანქანის რეალური ფოტოები. AutoPost გაასუფთავებს კადრს, მოაწესრიგებს ფონს და მოამზადებს Reel-ს, Story-სა და განცხადებას — მზა ჩამოსატვირთ ფაილებად, ბუნებრივად, ზედმეტი „სტუდიური“ ეფექტის გარეშე.'}
             </p>
 
             <div className="reveal reveal-4 mt-7 flex flex-col items-start gap-3.5 sm:flex-row sm:items-center sm:gap-5">
               <TrackedCta
                 source="hero"
+                locale={locale}
                 className="w-full max-w-xs justify-between sm:w-auto sm:max-w-none sm:min-w-[240px]"
               />
               <p className="text-ivory/48 text-xs leading-5">
-                ჯერ უფასო Preview.
+                {english ? 'Preview it for free.' : 'ჯერ უფასო Preview.'}
                 <br />
-                გადახდა — მხოლოდ თუ მოგეწონება.
+                {english
+                  ? 'Pay only if you like it.'
+                  : 'გადახდა — მხოლოდ თუ მოგეწონება.'}
               </p>
             </div>
 
             <ul className="reveal reveal-5 mt-7 grid gap-2.5 sm:grid-cols-2 lg:grid-cols-1 xl:grid-cols-2">
-              {trustItems.map((item) => {
-                const Icon = item.icon
+              {trustItems.map((text, index) => {
+                const Icon = trustIcons[index]!
                 return (
                   <li
-                    key={item.text}
+                    key={text}
                     className="text-ivory/60 inline-flex items-center gap-2 text-xs font-medium sm:text-[13px]"
                   >
                     <Icon
@@ -78,15 +97,16 @@ export function Hero({ assets }: { assets: CampaignAssetSet }) {
                       className="text-amber size-3.5 shrink-0"
                       strokeWidth={2.4}
                     />
-                    {item.text}
+                    {text}
                   </li>
                 )
               })}
             </ul>
 
             <p className="reveal reveal-5 text-ivory/48 mt-5 max-w-lg border-t border-white/[0.07] pt-4 text-xs leading-6">
-              AutoPost შენ ნაცვლად არაფერს აქვეყნებს — ჩამოსატვირთ ფაილებს პირად
-              Preview გვერდზე მიიღებ და თავად განათავსებ სასურველ პლატფორმაზე.
+              {english
+                ? 'AutoPost never publishes on your behalf. Your downloadable files stay on a private preview page, ready for you to post wherever you sell.'
+                : 'AutoPost შენ ნაცვლად არაფერს აქვეყნებს — ჩამოსატვირთ ფაილებს პირად Preview გვერდზე მიიღებ და თავად განათავსებ სასურველ პლატფორმაზე.'}
             </p>
           </div>
 
@@ -95,6 +115,7 @@ export function Hero({ assets }: { assets: CampaignAssetSet }) {
               heroBefore={assets.heroBefore}
               heroAfter={assets.heroAfter}
               kind={assets.kind}
+              locale={locale}
             />
           </div>
         </div>
@@ -113,6 +134,12 @@ export function Hero({ assets }: { assets: CampaignAssetSet }) {
               {brand}
             </span>
           ))}
+          <span>
+            <span className="text-ivory/18 mx-1.5 sm:mx-2" aria-hidden="true">
+              ·
+            </span>
+            {english ? 'and more' : 'და სხვა'}
+          </span>
         </p>
       </div>
     </section>

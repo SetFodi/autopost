@@ -15,6 +15,7 @@ import {
 
 import type { SelectedPhoto } from '@/components/forms/photo-types'
 import { formatBytes } from '@/components/forms/photo-utils'
+import type { AppLocale } from '@/lib/i18n'
 import {
   MAX_FILE_SIZE_BYTES,
   MAX_PHOTO_COUNT,
@@ -27,6 +28,7 @@ interface PhotoDropzoneProps {
   error: string | null
   disabled: boolean
   preparing: boolean
+  locale?: AppLocale
   onFilesSelected: (files: File[]) => void
   onRemove: (photoId: string) => void
 }
@@ -36,10 +38,12 @@ export function PhotoDropzone({
   error,
   disabled,
   preparing,
+  locale = 'ka',
   onFilesSelected,
   onRemove,
 }: PhotoDropzoneProps) {
   const [dragging, setDragging] = useState(false)
+  const english = locale === 'en'
 
   function handleInput(event: ChangeEvent<HTMLInputElement>) {
     const files = Array.from(event.target.files ?? [])
@@ -60,18 +64,21 @@ export function PhotoDropzone({
       <div className="mb-3 flex items-end justify-between gap-4">
         <div>
           <label htmlFor="vehicle-photos" className="form-label">
-            ავტომობილის ფოტოები <span aria-hidden="true">*</span>
+            {english ? 'Vehicle photos' : 'ავტომობილის ფოტოები'}{' '}
+            <span aria-hidden="true">*</span>
           </label>
           <p
             id="vehicle-photos-help"
             className="text-graphite/65 mt-1 text-xs leading-5"
           >
-            {MIN_PHOTO_COUNT}–{MAX_PHOTO_COUNT} ფოტო · თითოეული მაქს.{' '}
-            {formatBytes(MAX_FILE_SIZE_BYTES)} · ჯამში{' '}
+            {MIN_PHOTO_COUNT}–{MAX_PHOTO_COUNT}{' '}
+            {english ? 'photos · each max.' : 'ფოტო · თითოეული მაქს.'}{' '}
+            {formatBytes(MAX_FILE_SIZE_BYTES)} · {english ? 'total' : 'ჯამში'}{' '}
             {formatBytes(MAX_TOTAL_UPLOAD_SIZE_BYTES)}
             <span className="mt-1 block">
-              ატვირთვამდე ბრაუზერი ხელახლა ქმნის ფოტოს და შლის EXIF/GPS
-              მონაცემებს. HEIC/HEIF მიიღება მხოლოდ უსაფრთხო გარდაქმნისას.
+              {english
+                ? 'Before upload, your browser recreates each photo and removes EXIF/GPS data. HEIC/HEIF is accepted only when it can be safely converted.'
+                : 'ატვირთვამდე ბრაუზერი ხელახლა ქმნის ფოტოს და შლის EXIF/GPS მონაცემებს. HEIC/HEIF მიიღება მხოლოდ უსაფრთხო გარდაქმნისას.'}
             </span>
           </p>
         </div>
@@ -122,13 +129,21 @@ export function PhotoDropzone({
           </span>
           <span className="text-graphite mt-4 text-sm font-bold">
             {preparing
-              ? 'ფოტოები მზადდება…'
+              ? english
+                ? 'Preparing photos…'
+                : 'ფოტოები მზადდება…'
               : dragging
-                ? 'ჩამოაგდე ფოტოები აქ'
-                : 'აირჩიე ფოტოები'}
+                ? english
+                  ? 'Drop photos here'
+                  : 'ჩამოაგდე ფოტოები აქ'
+                : english
+                  ? 'Choose photos'
+                  : 'აირჩიე ფოტოები'}
           </span>
           <span className="text-graphite/65 mt-1 text-xs leading-5">
-            ან გადმოიტანე ამ ველში · JPG, PNG, WEBP, HEIC
+            {english
+              ? 'or drag them into this area · JPG, PNG, WEBP, HEIC'
+              : 'ან გადმოიტანე ამ ველში · JPG, PNG, WEBP, HEIC'}
           </span>
         </label>
       </div>
@@ -143,7 +158,7 @@ export function PhotoDropzone({
       {photos.length ? (
         <ul
           className="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-3"
-          aria-label="არჩეული ფოტოები"
+          aria-label={english ? 'Selected photos' : 'არჩეული ფოტოები'}
         >
           {photos.map((photo, index) => (
             <li
@@ -154,7 +169,11 @@ export function PhotoDropzone({
                 {photo.previewUrl ? (
                   <Image
                     src={photo.previewUrl}
-                    alt={`არჩეული ფოტო ${index + 1}`}
+                    alt={
+                      english
+                        ? `Selected photo ${index + 1}`
+                        : `არჩეული ფოტო ${index + 1}`
+                    }
                     fill
                     unoptimized
                     sizes="(max-width: 640px) 45vw, 180px"
@@ -177,7 +196,11 @@ export function PhotoDropzone({
                   onClick={() => onRemove(photo.id)}
                   disabled={disabled}
                   className="bg-graphite/90 text-ivory absolute top-2 right-2 grid size-11 place-items-center rounded-full transition-colors hover:bg-[#a8322f] disabled:cursor-not-allowed disabled:opacity-50"
-                  aria-label={`${index + 1}-ე ფოტოს წაშლა`}
+                  aria-label={
+                    english
+                      ? `Remove photo ${index + 1}`
+                      : `${index + 1}-ე ფოტოს წაშლა`
+                  }
                 >
                   <Trash2 aria-hidden="true" className="size-4" />
                 </button>
@@ -205,10 +228,16 @@ export function PhotoDropzone({
                           />
                         ) : null}
                         {photo.status === 'uploading'
-                          ? 'იტვირთება'
+                          ? english
+                            ? 'Uploading'
+                            : 'იტვირთება'
                           : photo.status === 'uploaded'
-                            ? 'ატვირთულია'
-                            : 'ვერ აიტვირთა'}
+                            ? english
+                              ? 'Uploaded'
+                              : 'ატვირთულია'
+                            : english
+                              ? 'Failed'
+                              : 'ვერ აიტვირთა'}
                       </span>
                       <span>{photo.progress}%</span>
                     </div>
@@ -230,7 +259,7 @@ export function PhotoDropzone({
               {photo.metadataSanitized ? (
                 <p className="text-graphite/60 flex items-center gap-1.5 px-2.5 pb-2 text-[9px] font-bold tracking-[0.06em] uppercase">
                   <ShieldCheck aria-hidden="true" className="size-3" />
-                  EXIF/GPS წაშლილია
+                  {english ? 'EXIF/GPS removed' : 'EXIF/GPS წაშლილია'}
                 </p>
               ) : null}
             </li>
